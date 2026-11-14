@@ -83,6 +83,8 @@ export const T = {
   dogRestSeconds: 2.2,
   /** After a person takes the turkey from the dog, the dog is stunned this long. */
   dogStunSeconds: 1.4,
+  /** After the dog snatches the turkey, nobody can take it back for this long: it gets a head start. */
+  dogSnatchImmunitySeconds: 1.6,
   dogRadius: 0.3,
 } as const;
 

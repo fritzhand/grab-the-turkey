@@ -50,6 +50,7 @@ export class Authority {
   private clock = 0;
   private lunges = new Map<string, number>();
   private dogAim = { x: 0, z: 0, t: 0 };
+  private slide = { side: 1, t: 0 };
   private eventId = 0;
 
   constructor(from: Snapshot, host: string) {
@@ -252,12 +253,14 @@ export class Authority {
     const give = (to: string, e: Omit<GameEvent, 'id'>) => {
       s.holder = to;
       tk.s = HELD;
-      s.immune[to] = T.stealImmunitySeconds * 1000;
+      s.immune[to] = (to === DOG_ID ? T.dogSnatchImmunitySeconds : T.stealImmunitySeconds) * 1000;
       this.lunges.delete(to);
       this.event(e);
     };
 
     if (s.holder === DOG_ID) {
+      // the dog just snatched it: nobody can take it straight back
+      if (s.immune[DOG_ID]) return;
       const d = s.dog;
       let best: Body | null = null;
       let bestD = Infinity;
@@ -292,6 +295,11 @@ export class Authority {
         give(DOG_ID, { k: 'dog', a: h.id });
         d.mode = DOG_CARRY;
         d.t = T.dogCarryMax;
+        // and it bolts, straight away from whoever it took it from
+        const ax = d.p[0] - h.x;
+        const az = d.p[1] - h.z;
+        const al = Math.hypot(ax, az) || 1;
+        d.v = [(ax / al) * T.dogCarrySpeed, (az / al) * T.dogCarrySpeed];
       }
       return;
     }
@@ -377,13 +385,17 @@ export class Authority {
     d.v[1] += az;
     const p = { x: d.p[0] + d.v[0] * dt, z: d.p[1] + d.v[1] * dt };
     const hit = keepOut(env, p, T.dogRadius);
+    this.slide.t -= dt;
     if (hit && wl > 1e-4) {
-      // pressed against something: slide along it, the way that heads toward where it wants to go
-      let tx = -hit.z;
-      let tz = hit.x;
-      if (tx * wx + tz * wz < 0) (tx = -tx), (tz = -tz);
-      d.v[0] = tx * speed * 0.9;
-      d.v[1] = tz * speed * 0.9;
+      // pressed against something: go around it. It picks the way that heads toward where it
+      // wants to go, then keeps going that way until it is clear, so it never dithers in front
+      // of a table with its target straight across.
+      const tx = -hit.z;
+      const tz = hit.x;
+      if (this.slide.t <= 0) this.slide.side = tx * wx + tz * wz < 0 ? -1 : 1;
+      this.slide.t = 0.6;
+      d.v[0] = tx * this.slide.side * speed * 0.9;
+      d.v[1] = tz * this.slide.side * speed * 0.9;
     }
     keepIn(env.bounds, p, T.dogRadius);
     d.p = [p.x, p.z];

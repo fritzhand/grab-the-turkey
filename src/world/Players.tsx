@@ -1,7 +1,12 @@
-/** Everyone's figures: this phone's own player, and every other player at their last pose. */
+/**
+ * Everyone's figures: this phone's own player, and every other player at their last pose. The place
+ * decides who they are: the white room's walkers, or child-size pups (env.cast).
+ */
 import { useSyncExternalStore } from 'react';
-import { Figure, type FigureState } from './Figure';
-import { fresh, game, getVersion, subscribe } from '../game/store';
+import { castOf } from '../env';
+import { Figure } from './Figure';
+import { Pup, type FigureState } from './Pup';
+import { fresh, game, getVersion, iHold, subscribe } from '../game/store';
 
 function readMe(out: FigureState) {
   const m = game.me;
@@ -11,6 +16,7 @@ function readMe(out: FigureState) {
   out.speed = m.speed;
   out.flags = m.flags;
   out.visible = true;
+  out.holding = iHold();
 }
 
 function dampAngle(a: number, b: number, k: number): number {
@@ -49,6 +55,7 @@ function reader(id: string) {
     out.facing = r.facing;
     out.speed = Math.hypot(v[0], v[1]);
     out.flags = r.pose.m;
+    out.holding = game.snap?.holder === id;
     out.visible = fresh(r, now);
   };
 }
@@ -63,11 +70,13 @@ function readerFor(id: string) {
 export function Players() {
   useSyncExternalStore(subscribe, getVersion);
   const others = [...game.remotes.entries()];
+  const Who = castOf(game.env) === 'pups' ? Pup : Figure;
+  const cast = castOf(game.env);
   return (
     <>
-      {game.me.id && <Figure key="me" me color={game.me.color} name={game.me.name} read={readMe} />}
+      {game.me.id && !game.tv && <Who key={`me:${cast}`} me color={game.me.color} name={game.me.name} read={readMe} />}
       {others.map(([id, r]) => (
-        <Figure key={`${id}:${r.pose.c}:${r.pose.n}`} color={r.pose.c} name={r.pose.n} read={readerFor(id)} />
+        <Who key={`${id}:${r.pose.c}:${r.pose.n}:${cast}`} color={r.pose.c} name={r.pose.n} read={readerFor(id)} />
       ))}
     </>
   );

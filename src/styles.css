@@ -819,3 +819,429 @@ select {
     font-size: 1.5rem;
   }
 }
+
+/* ---------------------------------------------------------------- the door: TV and demo */
+
+.gt-door-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.gt-btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.gt-tv-hint b {
+  font-family: var(--mono);
+  font-size: 0.82rem;
+}
+
+/* ---------------------------------------------------------------- the big screen */
+
+/* sized for reading across a room: everything scales with the screen's width */
+.gt-tv {
+  font-size: clamp(14px, 1.15vw, 30px);
+}
+
+.gt-tv .gt-top {
+  top: 1.4vw;
+  left: 1.4vw;
+  right: 1.4vw;
+}
+
+.gt-tv .gt-board {
+  min-width: 16em;
+  max-width: 20em;
+  padding: 0.5em;
+  font-size: 1.05em;
+}
+
+.gt-tv .gt-board li {
+  padding: 0.3em 0.5em;
+}
+
+.gt-tv .gt-dot {
+  width: 0.8em;
+  height: 0.8em;
+}
+
+.gt-tv .gt-board-time {
+  font-size: 0.95em;
+}
+
+.gt-tv .gt-clock {
+  padding: 0.5em 1.4em;
+}
+
+.gt-tv .gt-clock-time {
+  font-size: 3em;
+}
+
+.gt-tv .gt-clock-label {
+  font-size: 0.85em;
+}
+
+.gt-tv .gt-banner {
+  top: calc(1.4vw + 6.6em);
+  font-size: 1.4em;
+}
+
+.gt-tv .gt-toasts {
+  top: calc(1.4vw + 11em);
+  font-size: 1.15em;
+}
+
+.gt-tv .gt-countdown {
+  font-size: min(30vw, 420px);
+}
+
+.gt-tv .gt-center {
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(32em, 46vw);
+}
+
+.gt-tv .gt-panel h2 {
+  font-size: 2.6em;
+}
+
+.gt-tv .gt-muted {
+  font-size: 1em;
+}
+
+.gt-tv .gt-results-list {
+  font-size: 1.15em;
+}
+
+.gt-tv-join {
+  position: absolute;
+  left: 1.4vw;
+  bottom: 1.4vw;
+  display: flex;
+  align-items: center;
+  gap: 1em;
+  padding: 0.8em 1.2em 0.8em 0.8em;
+  border-radius: 1.2em;
+  background: var(--glass);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 10px 40px rgba(22, 25, 27, 0.12);
+}
+
+.gt-tv-join img {
+  width: 7.5em;
+  height: 7.5em;
+  border-radius: 0.5em;
+  image-rendering: pixelated;
+}
+
+.gt-tv-join.is-big img {
+  width: 12em;
+  height: 12em;
+}
+
+.gt-tv-join p {
+  margin: 0;
+}
+
+.gt-tv-join-kicker {
+  font-size: 0.8em;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.gt-tv-join-code {
+  font-family: var(--mono);
+  font-size: 3em;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  line-height: 1.1;
+  color: var(--accent);
+}
+
+.gt-tv-join.is-big .gt-tv-join-code {
+  font-size: 4.2em;
+}
+
+.gt-tv-join-url {
+  font-family: var(--mono);
+  font-size: 0.85em;
+  color: var(--ink-2);
+}
+
+.gt-tv-lobby {
+  pointer-events: auto;
+}
+
+.gt-tv-joined {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4em;
+}
+
+.gt-tv-joined li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  padding: 0.25em 0.7em;
+  border-radius: 999px;
+  background: var(--paper);
+  font-weight: 600;
+  animation: gt-pop 0.35s ease-out;
+}
+
+@keyframes gt-pop {
+  from {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+}
+
+.gt-tv-waiting {
+  margin: 0;
+  font-weight: 600;
+}
+
+.gt-tv-keys {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 0.75em;
+  color: var(--muted);
+}
+
+.gt-tv-demo {
+  position: absolute;
+  right: 1.4vw;
+  bottom: 1.4vw;
+  padding: 0.5em 1em;
+  border-radius: 999px;
+  background: var(--glass);
+  pointer-events: auto;
+}
+
+.gt-tv-demo span {
+  font-family: var(--mono);
+  font-weight: 700;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-right: 0.4em;
+}
+
+.gt-tv-demo a {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* ---------------------------------------------------------------- the phone as a controller */
+
+.gt-padview {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: none;
+  display: flex;
+  flex-direction: column;
+  background:
+    radial-gradient(ellipse 90% 60% at 50% 35%, color-mix(in srgb, var(--me) 14%, #ffffff) 0%, var(--white) 70%);
+  transition: background 0.3s;
+}
+
+.gt-padview.is-mine {
+  background: radial-gradient(ellipse 90% 70% at 50% 35%, color-mix(in srgb, var(--accent) 30%, #fff4ea) 0%, #f7e6d6 75%);
+}
+
+.gt-padview-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: calc(10px + var(--safe-t)) calc(12px + var(--safe-r)) 0 calc(12px + var(--safe-l));
+  font-size: 0.9rem;
+}
+
+.gt-padview-me {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+}
+
+.gt-padview-me .gt-dot {
+  width: 14px;
+  height: 14px;
+}
+
+.gt-padview-room {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.gt-padview-switch {
+  margin-left: auto;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--paper);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.gt-padview-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  padding: 6vh 20px 200px;
+  text-align: center;
+}
+
+.gt-padview-headline {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: clamp(2rem, 9vw, 3.4rem);
+  line-height: 1;
+}
+
+.gt-padview.is-mine .gt-padview-headline {
+  color: var(--accent);
+}
+
+.gt-padview-sub {
+  margin: 0;
+  color: var(--ink-2);
+}
+
+.gt-padview-stats {
+  margin: 8px 0 0;
+  display: flex;
+  gap: 18px;
+}
+
+.gt-padview-stats div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.gt-padview-stats dt {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.gt-padview-stats dd {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 1.4rem;
+}
+
+/* bigger thumbs on the controller: nothing else competes for the screen */
+.gt-padview .gt-stick {
+  width: 156px;
+  height: 156px;
+  left: calc(26px + var(--safe-l));
+  bottom: calc(30px + var(--safe-b));
+}
+
+.gt-padview .gt-stick-knob {
+  width: 64px;
+  height: 64px;
+}
+
+.gt-padview .gt-toasts {
+  top: auto;
+  bottom: calc(210px + var(--safe-b));
+}
+
+/* ---------------------------------------------------------------- the big screen, split per player */
+
+.gt-split {
+  position: absolute;
+  inset: 0;
+}
+
+.gt-split-pane {
+  position: absolute;
+  box-shadow: inset 0 0 0 2px rgba(29, 26, 23, 0.55);
+}
+
+.gt-split-pane.is-holder {
+  box-shadow: inset 0 0 0 5px var(--accent);
+}
+
+.gt-split-name {
+  position: absolute;
+  left: 0.8em;
+  bottom: 0.8em;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45em;
+  padding: 0.35em 0.9em;
+  border-radius: 999px;
+  background: var(--glass);
+  font-size: 1.15em;
+  font-weight: 700;
+  border-left: 0.35em solid var(--me);
+}
+
+.gt-split-time {
+  font-family: var(--mono);
+  font-weight: 400;
+  color: var(--ink-2);
+}
+
+.gt-split-dog {
+  position: absolute;
+  left: 50%;
+  top: calc(1.4vw + 6.6em);
+  transform: translateX(-50%);
+  padding: 0.4em 1em;
+  border-radius: 999px;
+  background: var(--glass);
+  font-weight: 700;
+  color: var(--accent);
+}
+
+/* in split mode the join card shrinks to the top right, out of the panes' name labels */
+.gt-tv.is-split .gt-tv-join {
+  left: auto;
+  bottom: auto;
+  right: 1.4vw;
+  top: calc(1.4vw + 3em);
+  padding: 0.5em 0.8em 0.5em 0.5em;
+}
+
+.gt-tv.is-split .gt-tv-join img {
+  width: 5em;
+  height: 5em;
+}
+
+.gt-tv.is-split .gt-tv-join-code {
+  font-size: 1.8em;
+}

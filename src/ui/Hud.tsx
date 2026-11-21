@@ -6,9 +6,8 @@ import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { onAchievement } from '../audio/director';
 import { getMode, setMode, type SoundMode } from '../audio/sound';
 import { ENVIRONMENTS } from '../env';
-import { spawn } from '../game/Controller';
 import { intent } from '../game/net';
-import { fresh, game, getVersion, subscribe } from '../game/store';
+import { fresh, game, getVersion, screenHere, subscribe } from '../game/store';
 import { T } from '../game/tuning';
 import { DOG_ID, type GameEvent, type Snapshot } from '../game/types';
 import { PLAYER_COLORS } from '../world/palette';
@@ -25,14 +24,14 @@ export function held(ms: number): string {
   return `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 }
 
-function nameOf(snap: Snapshot, id: string | undefined): string {
+export function nameOf(snap: Snapshot, id: string | undefined): string {
   if (!id) return 'Someone';
   if (id === DOG_ID) return T.dogName;
   if (id === game.me.id) return 'You';
   return game.remotes.get(id)?.pose.n ?? snap.names[id] ?? 'Someone';
 }
 
-function colorOf(snap: Snapshot, id: string): string {
+export function colorOf(snap: Snapshot, id: string): string {
   if (id === DOG_ID) return '#c98a4a';
   const c = id === game.me.id ? game.me.color : game.remotes.get(id)?.pose.c ?? snap.colors[id] ?? 0;
   return PLAYER_COLORS[c % PLAYER_COLORS.length];
@@ -57,7 +56,7 @@ function say(snap: Snapshot, e: GameEvent): string {
   }
 }
 
-function Toasts({ snap }: { snap: Snapshot }) {
+export function Toasts({ snap }: { snap: Snapshot }) {
   const seen = useRef(0);
   const [items, setItems] = useState<{ id: number; text: string; detail?: string }[]>([]);
   useEffect(
@@ -98,10 +97,10 @@ function Toasts({ snap }: { snap: Snapshot }) {
   );
 }
 
-function Board({ snap }: { snap: Snapshot }) {
+export function Board({ snap, limit = 8 }: { snap: Snapshot; limit?: number }) {
   const now = performance.now();
   const ids = new Set<string>([...Object.keys(snap.scores)]);
-  if (game.me.id) ids.add(game.me.id);
+  if (game.me.id && !game.tv) ids.add(game.me.id);
   for (const [id, r] of game.remotes) if (fresh(r, now)) ids.add(id);
   ids.add(DOG_ID);
   const rows = [...ids]
@@ -109,7 +108,7 @@ function Board({ snap }: { snap: Snapshot }) {
     .sort((a, b) => b.ms - a.ms || (a.id === DOG_ID ? 1 : b.id === DOG_ID ? -1 : 0));
   return (
     <ol className="gt-board">
-      {rows.slice(0, 8).map((r) => (
+      {rows.slice(0, limit).map((r) => (
         <li key={r.id} className={`${r.id === game.me.id ? 'is-me' : ''} ${snap.holder === r.id ? 'is-holder' : ''}`}>
           <span className="gt-dot" style={{ background: colorOf(snap, r.id) }} />
           <span className="gt-board-name">{r.id === game.me.id ? game.me.name || 'You' : nameOf(snap, r.id)}</span>
@@ -148,7 +147,7 @@ function Share() {
 const NEXT: Record<SoundMode, SoundMode> = { all: 'sfx', sfx: 'off', off: 'all' };
 const LABEL: Record<SoundMode, string> = { all: '🔊 Music', sfx: '🔉 Effects', off: '🔇 Off' };
 
-function SoundToggle() {
+export function SoundToggle() {
   const [m, setM] = useState<SoundMode>(getMode);
   return (
     <button
@@ -176,6 +175,11 @@ function Lobby({ snap }: { snap: Snapshot }) {
         {others ? 'Anyone can start. The round runs five minutes.' : 'Send the invite link. You can start alone and play against the dog.'}
       </p>
       {!others && game.netNote && <p className="gt-note">{game.netNote}</p>}
+      {!screenHere() && (
+        <p className="gt-muted gt-tv-hint">
+          📺 Playing together in one room? Open <b>{location.host}/?tv={game.room}</b> on the TV: everyone watches it and plays on their phone.
+        </p>
+      )}
       <label className="gt-field gt-field-row">
         <span>Place</span>
         <select value={snap.env} onChange={(e) => intent({ k: 'env', id: e.target.value })}>
@@ -193,7 +197,7 @@ function Lobby({ snap }: { snap: Snapshot }) {
   );
 }
 
-function Results({ snap }: { snap: Snapshot }) {
+export function Results({ snap }: { snap: Snapshot }) {
   const rows = snap.last?.scores ?? [];
   const [first] = rows;
   const winner = first ? (first[0] === game.me.id ? 'You win!' : `${first[0] === DOG_ID ? T.dogName : first[1]} wins!`) : 'Nobody held the turkey';
@@ -215,7 +219,7 @@ function Results({ snap }: { snap: Snapshot }) {
   );
 }
 
-function Banner({ snap }: { snap: Snapshot }) {
+export function Banner({ snap }: { snap: Snapshot }) {
   if (snap.phase === 'countdown') return <div className="gt-countdown">{Math.max(1, Math.ceil(snap.left / 1000))}</div>;
   const mine = snap.holder && snap.holder === game.me.id;
   if (mine)
@@ -229,18 +233,9 @@ function Banner({ snap }: { snap: Snapshot }) {
   return <div className="gt-banner is-free">The turkey is up for grabs</div>;
 }
 
-export function Hud() {
+export function Hud({ onPad }: { onPad?: () => void } = {}) {
   useSyncExternalStore(subscribe, getVersion);
   const snap = game.snap;
-
-  // a new place: everyone back to a starting spot
-  const envId = game.env.id;
-  const placed = useRef('');
-  useEffect(() => {
-    if (!game.me.id || placed.current === envId) return;
-    placed.current = envId;
-    spawn();
-  }, [envId, game.me.id]);
 
   if (!snap) {
     return (
@@ -270,6 +265,11 @@ export function Hud() {
         <div className="gt-top-right">
           <Share />
           <SoundToggle />
+          {onPad && (
+            <button type="button" className="gt-sound" onClick={onPad} title="Use this phone as a controller and watch the TV">
+              📺 Watch the TV
+            </button>
+          )}
         </div>
       </div>
       <Banner snap={snap} />

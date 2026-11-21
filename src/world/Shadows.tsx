@@ -15,6 +15,9 @@ import { game } from '../game/store';
 /** Every shadow's own floor plane: hidden while any of them draws, so none shadows another. */
 const planes = new Set<THREE.Object3D>();
 
+/** Objects the shadow pass skips: a roof the camera would look up into, scenery far below the floor. */
+export const shadowExclude = new Set<THREE.Object3D>();
+
 interface Props {
   /** The side of the square it covers, in meters. */
   size: number;
@@ -26,9 +29,11 @@ interface Props {
   color: string;
   /** Its height over the floor (the second one sits a hair above the first). */
   lift?: number;
+  /** How high above the floor its camera sits: rugs and mats under this don't cast. */
+  base?: number;
 }
 
-export function Shadow({ size, resolution, far, blur, opacity, color, lift = 0.002 }: Props) {
+export function Shadow({ size, resolution, far, blur, opacity, color, lift = 0.002, base = 0.003 }: Props) {
   const { gl, scene } = useThree();
   const plane = useRef<THREE.Mesh>(null);
 
@@ -82,7 +87,7 @@ export function Shadow({ size, resolution, far, blur, opacity, color, lift = 0.0
 
   useFrame(() => {
     const p = game.me.pos;
-    r.cam.position.set(p.x, 0.003, p.z);
+    r.cam.position.set(p.x, base, p.z);
     r.cam.lookAt(p.x, 1, p.z);
     r.cam.updateMatrixWorld();
     plane.current?.position.set(p.x, lift, p.z);
@@ -91,6 +96,8 @@ export function Shadow({ size, resolution, far, blur, opacity, color, lift = 0.0
     const override = scene.overrideMaterial;
     const autoClear = gl.autoClear;
     planes.forEach((o) => (o.visible = false));
+    const hidden: [THREE.Object3D, boolean][] = [...shadowExclude].map((o) => [o, o.visible]);
+    hidden.forEach(([o]) => (o.visible = false));
     scene.background = null;
     scene.overrideMaterial = r.depth;
     gl.autoClear = true; // the composer turns it off; these passes clear to transparent
@@ -102,6 +109,7 @@ export function Shadow({ size, resolution, far, blur, opacity, color, lift = 0.0
     blurOnce(blur * 0.4);
     gl.setRenderTarget(null);
     gl.autoClear = autoClear;
+    hidden.forEach(([o, v]) => (o.visible = v));
     planes.forEach((o) => (o.visible = true));
   });
 

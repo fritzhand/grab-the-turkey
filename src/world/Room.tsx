@@ -12,8 +12,9 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import type { Environment } from '../env';
 import { game, getVersion, subscribe } from '../game/store';
+import { PaintedModel } from './PaintedModel';
 import { Pieces } from './Pieces';
-import { KEY_DIR } from './rampMaterial';
+import { KEY_DIR } from './paint';
 import { Shadow } from './Shadows';
 
 function useEnv(): Environment {
@@ -72,27 +73,32 @@ function Model({ env }: { env: Environment }) {
 export function Room() {
   const env = useEnv();
   const c = env.colors;
+  const painted = !!env.model?.painterly;
   return (
     <>
       <color attach="background" args={[c.sky]} />
-      <fog attach="fog" args={[c.sky, c.fog[0], c.fog[1]]} />
+      {/* the big screen's camera is high up: push the fog back so the floor is not lost in it */}
+      <fog attach="fog" args={game.tv ? [c.sky, c.fog[0] + 60, c.fog[1] + 90] : [c.sky, c.fog[0], c.fog[1]]} />
       <hemisphereLight args={['#ffffff', '#d9dad6', 1.6]} />
       <directionalLight position={KEY_DIR.clone().multiplyScalar(30)} intensity={2.1} />
-      <mesh rotation-x={-Math.PI / 2}>
-        <planeGeometry args={[400, 400]} />
-        <meshBasicMaterial color={c.floor} />
-      </mesh>
-      <Edge env={env} />
+      {!painted && (
+        <mesh rotation-x={-Math.PI / 2}>
+          <planeGeometry args={[400, 400]} />
+          <meshBasicMaterial color={c.floor} />
+        </mesh>
+      )}
+      {!painted && <Edge env={env} />}
       {env.floorImage && (
         <Suspense fallback={null}>
           <FloorImage env={env} />
         </Suspense>
       )}
-      {env.model && <Model env={env} />}
+      {env.model && (painted ? <PaintedModel env={env} /> : <Model env={env} />)}
       <Pieces env={env} />
       {/* a wide, soft one for the furniture, and a close one at the player's feet */}
-      <Shadow size={40} resolution={512} far={3} blur={1.5} opacity={0.5} color="#4a4e52" />
-      <Shadow size={6} resolution={256} far={1.8} blur={1.4} opacity={0.6} color="#30353a" lift={0.004} />
+      {/* in a painted place the rugs are a few centimeters thick, so the shadows start above them */}
+      <Shadow size={40} resolution={512} far={3} blur={1.5} opacity={painted ? 0.42 : 0.5} color={painted ? '#5b4a46' : '#4a4e52'} lift={painted ? 0.056 : 0.002} base={painted ? 0.05 : 0.003} />
+      <Shadow size={6} resolution={256} far={1.8} blur={1.4} opacity={painted ? 0.5 : 0.6} color={painted ? '#4a3a3a' : '#30353a'} lift={painted ? 0.058 : 0.004} base={painted ? 0.05 : 0.003} />
     </>
   );
 }

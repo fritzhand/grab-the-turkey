@@ -70,7 +70,7 @@ function Shape({ p, env }: { p: Piece; env: Environment }) {
 }
 
 export function Pieces({ env }: { env: Environment }) {
-  const pieces = useMemo(() => env.pieces, [env]);
+  const pieces = useMemo(() => env.pieces.filter((p) => !p.hidden), [env]);
   return (
     <>
       {pieces.map((p, i) => (

@@ -9,7 +9,10 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { game } from '../game/store';
-import { T } from '../game/tuning';
+import { castOf } from '../env';
+import { getScale, T } from '../game/tuning';
+import { addSmoothNormals, inkMaterial } from './paint';
+import { HOLD } from './pups';
 import { AIR, DOG_ID, F_DIP, HELD } from '../game/types';
 import { toonGradient } from './toon';
 
@@ -21,19 +24,30 @@ export function Turkey() {
   const [model, setModel] = useState<THREE.Object3D | null>(null);
   const shown = useRef(new THREE.Vector3());
   const spin = useRef(0);
+  const inks = useRef<THREE.Mesh[]>([]);
 
   useEffect(() => {
     let alive = true;
     new GLTFLoader().load('/models/turkey.glb', (gltf) => {
       if (!alive) return;
       const root = gltf.scene;
+      const meshes: THREE.Mesh[] = [];
       root.traverse((o) => {
         const m = o as THREE.Mesh;
         if (m.isMesh) {
           const old = m.material as THREE.MeshStandardMaterial;
           m.material = new THREE.MeshToonMaterial({ map: old.map, color: old.color, gradientMap: toonGradient() });
           m.castShadow = true;
+          meshes.push(m);
         }
+      });
+      // an ink outline, shown in a painted place (added after the walk, so the walk does not meet it)
+      inks.current = meshes.map((m) => {
+        addSmoothNormals(m.geometry);
+        const ink = new THREE.Mesh(m.geometry, inkMaterial);
+        ink.visible = false;
+        m.add(ink);
+        return ink;
       });
       root.scale.setScalar(SCALE);
       setModel(root);
@@ -52,16 +66,25 @@ export function Turkey() {
     g.visible = !!snap;
     if (!snap) return;
     const tk = snap.turkey;
+    const k = getScale();
+    g.scale.setScalar(k);
+    const painted = !!game.env.model?.painterly;
+    for (const ink of inks.current) ink.visible = painted;
+    // where it rides: out in front, at the arms (a pup holds it lower and closer)
+    const pups = castOf(game.env) === 'pups';
+    const fwd = pups ? HOLD.forward : 0.38 * k;
+    const hy = pups ? HOLD.y : 1.0 * k;
+    const hyDip = pups ? HOLD.yDip : 0.62 * k;
     const goal = new THREE.Vector3(...tk.p);
     let ease = 18;
     const m = game.me;
     if (snap.holder === m.id && m.id) {
       // mine: drawn from my own position, with no lag
-      goal.set(m.pos.x + Math.sin(m.facing) * 0.38, m.flags & F_DIP ? 0.62 : 1.0, m.pos.z + Math.cos(m.facing) * 0.38);
+      goal.set(m.pos.x + Math.sin(m.facing) * fwd, m.flags & F_DIP ? hyDip : hy, m.pos.z + Math.cos(m.facing) * fwd);
       ease = 40;
     } else if (snap.holder && snap.holder !== DOG_ID) {
       const r = game.remotes.get(snap.holder);
-      if (r) goal.set(r.shown.x + Math.sin(r.facing) * 0.38, r.pose.m & F_DIP ? 0.62 : 1.0, r.shown.z + Math.cos(r.facing) * 0.38);
+      if (r) goal.set(r.shown.x + Math.sin(r.facing) * fwd, r.pose.m & F_DIP ? hyDip : hy, r.shown.z + Math.cos(r.facing) * fwd);
       ease = 30;
     } else if (tk.s === AIR) {
       // run the flight forward from the snapshot

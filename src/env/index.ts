@@ -12,6 +12,22 @@ export function getEnvironment(id: string | null | undefined): Environment {
   return ENVIRONMENTS.find((e) => e.id === id) ?? ENVIRONMENTS[0];
 }
 
+/** Who plays in a place, and at what size. */
+const CAST_PARAM = typeof location === 'undefined' ? null : new URLSearchParams(location.search).get('cast');
+/** ?cast=pups (or walkers) tries the other cast in any place. */
+export const castOf = (env: Environment): 'walkers' | 'pups' =>
+  CAST_PARAM === 'pups' || CAST_PARAM === 'walkers' ? CAST_PARAM : env.cast ?? 'walkers';
+export const scaleOf = (env: Environment): number => (CAST_PARAM ? (castOf(env) === 'pups' ? 0.74 : 1) : env.scale ?? (castOf(env) === 'pups' ? 0.74 : 1));
+
+const SPLIT_PARAM = typeof location === 'undefined' ? false : new URLSearchParams(location.search).has('split');
+/** Whether the big screen splits into a pane per player here. */
+export const splitOf = (env: Environment): boolean => SPLIT_PARAM || env.screen === 'split';
+
+/** The middle of the place and how far it reaches, for a camera that shows all of it. */
+export function extentOf(env: Environment): { hx: number; hz: number } {
+  return env.bounds.kind === 'circle' ? { hx: env.bounds.r, hz: env.bounds.r } : { hx: env.bounds.hx, hz: env.bounds.hz };
+}
+
 /** A piece as a collision box: center, half sizes, height, and turn in radians. */
 export interface Block {
   x: number;

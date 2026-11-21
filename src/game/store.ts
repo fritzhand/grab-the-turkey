@@ -4,7 +4,8 @@
  * plain object read every frame by the scene; the HUD subscribes to its changes.
  */
 import * as THREE from 'three';
-import { getEnvironment, type Environment } from '../env';
+import { getEnvironment, scaleOf, type Environment } from '../env';
+import { setScale, T } from './tuning';
 import type { Pose, Snapshot } from './types';
 
 export interface Remote {
@@ -65,7 +66,33 @@ export const game = {
   env: getEnvironment(null) as Environment,
   /** The model files have loaded. */
   ready: false,
+  /**
+   * This page is the big screen (?tv=ABCD): it shows the whole place from above, hosts the game,
+   * and is not a player.
+   */
+  tv: false,
+  /** This page plays a game by itself, with made-up players (?demo): the attract loop. */
+  demo: false,
+  /** This phone is a controller only: the stick and buttons, no 3D, eyes on the big screen. */
+  pad: false,
+  /** The big screens in the room, by id, and when each last said it was here. */
+  screens: new Map<string, { at: number; ready: boolean }>(),
 };
+
+/** Whether a big screen is in the room (this page, or another that was heard from lately). */
+export function screenHere(now = performance.now()): boolean {
+  if (game.tv) return true;
+  for (const s of game.screens.values()) if (now - s.at < 3500) return true;
+  return false;
+}
+
+/** Moves the game to a place, and sizes everyone for it. */
+export function setEnv(env: Environment): void {
+  const was = T.camDist;
+  game.env = env;
+  setScale(scaleOf(env));
+  game.cam.dist *= T.camDist / was;
+}
 
 let version = 0;
 const listeners = new Set<() => void>();

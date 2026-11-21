@@ -5,10 +5,12 @@
  * hold on, so the chasers always close in. To keep it, the holder dodges (a sideways burst), dips
  * (ducks under a grab) or throws (hold to wind up, release to let fly).
  */
-export const T = {
+const BASE = {
   /** A round, and the countdown before it. */
   roundSeconds: 5 * 60,
   countdownSeconds: 3,
+  /** With a big screen in the room, the results show this long and the next round starts by itself. */
+  autoNextSeconds: 15,
 
   // --- running
   /** Top speed without the turkey. */
@@ -86,8 +88,35 @@ export const T = {
   /** After the dog snatches the turkey, nobody can take it back for this long: it gets a head start. */
   dogSnatchImmunitySeconds: 1.6,
   dogRadius: 0.3,
-} as const;
+  /** How high a turkey can sit and still be picked up, by a player and by the dog. */
+  pickupHeightMax: 1.4,
+  dogHeightMax: 1.0,
+  /** How far the camera sits behind you, and the height it looks at. */
+  camDist: 11,
+  camLookY: 1.0,
+};
+
+/** The numbers that are sizes: scaled with the cast (see setScale). */
+const SIZES = [
+  'bodyRadius', 'touchReach', 'lungeReach', 'pickupReach', 'catchReach', 'catchHeightMax', 'turkeyRadius',
+  'dogReach', 'dogRadius', 'pickupHeightMax', 'dogHeightMax', 'camDist', 'camLookY',
+] as const;
+
+/** The live numbers: BASE, with the sizes scaled for the environment being played. */
+export const T: { -readonly [K in keyof typeof BASE]: (typeof BASE)[K] } = { ...BASE };
+
+let scaleNow = 1;
+/** Scale every size to the cast (1 for adult walkers; about 0.74 for child-size pups). */
+export function setScale(k: number): void {
+  if (k === scaleNow) return;
+  scaleNow = k;
+  for (const key of SIZES) T[key] = BASE[key] * k;
+}
+export const getScale = () => scaleNow;
 
 /** How often each phone sends its position, and the host sends the game. */
 export const POSE_HZ = 20;
 export const SNAP_HZ = 15;
+/** Through a websocket relay, which counts every message: less often, and smoothed on arrival. */
+export const RELAY_POSE_HZ = 10;
+export const RELAY_SNAP_HZ = 10;

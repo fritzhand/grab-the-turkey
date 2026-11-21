@@ -57,7 +57,8 @@ export function primaryUp(): void {
   if (game.me.windup >= 0) release();
 }
 
-export function Controller() {
+/** The keyboard, for whoever plays on a laptop (in the 3D view or the controller). */
+export function useKeys(): void {
   useEffect(() => {
     const typing = (e: KeyboardEvent) => (e.target as HTMLElement)?.closest?.('input, textarea, select');
     const down = (e: KeyboardEvent) => {
@@ -91,8 +92,11 @@ export function Controller() {
       window.removeEventListener('blur', blur);
     };
   }, []);
+}
 
-  useFrame((_, delta) => {
+/** Moves this phone's player by one frame. */
+export function stepMe(delta: number): void {
+  {
     const dt = Math.min(delta, 0.05);
     const m = game.me;
     const inp = game.input;
@@ -221,8 +225,37 @@ export function Controller() {
       m.flags = flags;
       notify();
     }
+  }
+}
+
+/** In the 3D view: the keyboard, and a step every frame. */
+export function Controller() {
+  useKeys();
+  useFrame((_, delta) => {
+    if (!game.tv && !game.demo) stepMe(delta);
   });
   return null;
+}
+
+/**
+ * In the controller (no 3D): the keyboard, and a step every animation frame. Other players are not
+ * drawn here, so their bodies are moved to their poses for the bumping.
+ */
+export function usePadLoop(): void {
+  useKeys();
+  useEffect(() => {
+    let raf = 0;
+    let last = performance.now();
+    const loop = (now: number) => {
+      const dt = (now - last) / 1000;
+      last = now;
+      for (const r of game.remotes.values()) r.shown.set(r.pose.p[0], 0, r.pose.p[1]);
+      stepMe(dt);
+      raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
+  }, []);
 }
 
 /** Puts this phone's player at a spawn point (on joining, and when the place changes). */

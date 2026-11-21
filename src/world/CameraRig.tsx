@@ -8,9 +8,10 @@ import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { blocked } from '../env';
 import { game } from '../game/store';
+import { T } from '../game/tuning';
 
 const PITCH: [number, number] = [0.12, 1.3];
-const ZOOM: [number, number] = [4, 22];
+const ZOOM: [number, number] = [3, 22];
 const HELD = ['KeyQ', 'KeyE', 'Equal', 'Minus'];
 
 function zoomBy(k: number) {
@@ -105,7 +106,7 @@ export function CameraRig() {
 
     const c = cur.current;
     const { yaw, pitch } = game.cam;
-    look.copy(game.me.pos).setY(1.0);
+    look.copy(game.me.pos).setY(T.camLookY);
     c.look.lerp(look, c.first ? 1 : 1 - Math.exp(-dt * 8));
 
     const dir = probe.set(Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch));

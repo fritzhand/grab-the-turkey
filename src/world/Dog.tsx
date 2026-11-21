@@ -7,7 +7,7 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { game } from '../game/store';
-import { T } from '../game/tuning';
+import { getScale, T } from '../game/tuning';
 import { DOG_CARRY, DOG_REST } from '../game/types';
 import { NameTag } from './NameTag';
 import { toonGradient } from './toon';
@@ -58,6 +58,7 @@ export function Dog() {
 
   useFrame((_, delta) => {
     const dt = Math.min(delta, 0.05);
+    group.current?.scale.setScalar(getScale());
     const g = group.current;
     const snap = game.snap;
     if (!g) return;

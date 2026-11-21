@@ -4,7 +4,7 @@
  * position from the poses they send, and decides who has the turkey.
  */
 import { getEnvironment, groundAt, keepIn, keepOut, type Environment } from '../env';
-import { T } from './tuning';
+import { getScale, T } from './tuning';
 import {
   AIR, DOG_CARRY, DOG_CHASE, DOG_ID, DOG_REST, F_DIP, HELD, REST,
   type GameEvent, type Intent, type Snapshot,
@@ -52,6 +52,8 @@ export class Authority {
   private dogAim = { x: 0, z: 0, t: 0 };
   private slide = { side: 1, t: 0 };
   private eventId = 0;
+  /** Rounds run back to back: after the results, the next countdown starts by itself. */
+  auto = false;
 
   constructor(from: Snapshot, host: string) {
     this.s = structuredClone(from);
@@ -79,7 +81,7 @@ export class Authority {
       const dir = Math.hypot(vx, vz) || 1;
       s.turkey = {
         s: AIR,
-        p: [b.x + (vx / dir) * 0.5, 1.25, b.z + (vz / dir) * 0.5],
+        p: [b.x + (vx / dir) * 0.5 * getScale(), 1.25 * getScale(), b.z + (vz / dir) * 0.5 * getScale()],
         v: [vx * k, vy * k, vz * k],
         by: from,
         nc: T.throwNoCatchSeconds * 1000,
@@ -165,6 +167,11 @@ export class Authority {
       s.holder = null;
       s.turkey.s = AIR;
       s.turkey.v = [0, 0, 0];
+      if (this.auto) s.left = T.autoNextSeconds * 1000;
+    } else if (this.auto && s.left <= 0 && s.last) {
+      // the results have had their time: the next round
+      s.phase = 'countdown';
+      s.left = T.countdownSeconds * 1000;
     } else {
       s.left = 0;
     }
@@ -174,12 +181,14 @@ export class Authority {
     const s = this.s;
     if (s.holder === DOG_ID) {
       const d = s.dog;
-      return [d.p[0] + Math.sin(d.f) * MOUTH, 0.42, d.p[1] + Math.cos(d.f) * MOUTH];
+      const k = getScale();
+      return [d.p[0] + Math.sin(d.f) * MOUTH * k, 0.42 * k, d.p[1] + Math.cos(d.f) * MOUTH * k];
     }
     const b = s.holder ? bodies.get(s.holder) : null;
     if (!b) return null;
     const dip = b.m & F_DIP;
-    return [b.x + Math.sin(b.f) * 0.38, dip ? 0.62 : 1.0, b.z + Math.cos(b.f) * 0.38];
+    const k = getScale();
+    return [b.x + Math.sin(b.f) * 0.38 * k, (dip ? 0.62 : 1.0) * k, b.z + Math.cos(b.f) * 0.38 * k];
   }
 
   private turkeyStep(dt: number, env: Environment, bodies: Map<string, Body>) {
@@ -311,7 +320,7 @@ export class Authority {
     for (const b of bodies.values()) {
       if (tk.by === b.id && tk.nc > 0) continue;
       const dist = Math.hypot(b.x - tx, b.z - tz);
-      const ok = tk.s === AIR ? dist < T.catchReach && ty < T.catchHeightMax : dist < T.pickupReach && ty < 1.4;
+      const ok = tk.s === AIR ? dist < T.catchReach && ty < T.catchHeightMax : dist < T.pickupReach && ty < T.pickupHeightMax;
       if (ok && dist < bestD) (best = b), (bestD = dist);
     }
     if (best) {
@@ -319,7 +328,7 @@ export class Authority {
       return;
     }
     const d = s.dog;
-    if (d.mode === DOG_CHASE && ty < 1.0 && Math.hypot(d.p[0] - tx, d.p[1] - tz) < T.dogReach + 0.3) {
+    if (d.mode === DOG_CHASE && ty < T.dogHeightMax && Math.hypot(d.p[0] - tx, d.p[1] - tz) < T.dogReach + 0.3) {
       give(DOG_ID, { k: 'dog' });
       d.mode = DOG_CARRY;
       d.t = T.dogCarryMax;

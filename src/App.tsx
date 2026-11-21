@@ -1,17 +1,32 @@
 /**
  * The page: first the door (your name, your color, the room), then the game. A room is a four
  * letter code in the link, ?room=ABCD, so sending the link is the invitation.
+ *
+ * Three other ways in:
+ * - ?tv=ABCD (or ?tv for a new room): the big screen. The whole place from above, the room code and
+ *   a QR code to join, the leaderboard. It hosts the game and is not a player.
+ * - On a phone, once a big screen is in the room, the phone becomes a controller (PadView) unless
+ *   you ask for the room on the phone too; ?pad forces it.
+ * - ?demo: a game played by itself, from above (game/demo.ts).
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { unlock } from './audio/sound';
 import { ENVIRONMENTS, getEnvironment } from './env';
+import { spawn } from './game/Controller';
+import { startDemo } from './game/demo';
 import { connect } from './game/net';
-import { game, notify } from './game/store';
+import { game, getVersion, notify, screenHere, subscribe } from './game/store';
 import { T } from './game/tuning';
 import { Controls } from './ui/Controls';
 import { Hud } from './ui/Hud';
+import { PadView, setPad } from './ui/PadView';
+import { TvHud } from './ui/TvHud';
 import { PLAYER_COLORS } from './world/palette';
 import { Scene } from './world/Scene';
+
+const PARAMS = new URLSearchParams(location.search);
+const TV = PARAMS.has('tv');
+const DEMO = PARAMS.has('demo');
 
 const LETTERS = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
 const newCode = () => Array.from({ length: 4 }, () => LETTERS[Math.floor(Math.random() * LETTERS.length)]).join('');
@@ -32,7 +47,7 @@ function save(key: string, value: string) {
   }
 }
 
-function Door({ onJoin }: { onJoin: (name: string, color: number, room: string, env: string) => void }) {
+function Door({ onJoin, onDemo }: { onJoin: (name: string, color: number, room: string, env: string) => void; onDemo: () => void }) {
   const params = new URLSearchParams(location.search);
   const invited = clean(params.get('room') ?? '');
   const [name, setName] = useState(() => load('gt-name', ''));
@@ -132,6 +147,15 @@ function Door({ onJoin }: { onJoin: (name: string, color: number, room: string, 
           {mode === 'new' ? 'Start a room' : invited && code === invited ? `Join room ${code}` : 'Join'}
         </button>
 
+        <div className="gt-door-row">
+          <a className="gt-btn gt-btn-ghost" href={`/?tv${mode === 'join' && code.length === 4 ? `=${code}` : ''}&env=${env}`} title="Open this on the TV: everyone plays on their phone and watches the TV">
+            📺 Put it on the TV
+          </a>
+          <button type="button" className="gt-btn gt-btn-ghost" onClick={onDemo}>
+            ▶ Watch a demo
+          </button>
+        </div>
+
         <details className="gt-how">
           <summary>How to play</summary>
           <ul>
@@ -155,8 +179,80 @@ function Door({ onJoin }: { onJoin: (name: string, color: number, room: string, 
   );
 }
 
+/** A new place: this phone's player back to a starting spot. */
+function useSpawnOnEnv() {
+  useSyncExternalStore(subscribe, getVersion);
+  const envId = game.env.id;
+  const placed = useRef('');
+  useEffect(() => {
+    if (!game.me.id || game.tv || placed.current === envId) return;
+    placed.current = envId;
+    spawn();
+  }, [envId, game.me.id]);
+}
+
+/**
+ * Whether this phone shows the controller: forced by ?pad, else once a screen is in the room, unless
+ * this phone chose the 3D view (remembered).
+ */
+function usePad(): [boolean, (on: boolean) => void] {
+  useSyncExternalStore(subscribe, getVersion);
+  const [chosen, setChosen] = useState<boolean | null>(() => {
+    if (PARAMS.has('pad')) return true;
+    try {
+      const v = localStorage.getItem('gt-pad');
+      return v === null ? null : v === '1';
+    } catch {
+      return null;
+    }
+  });
+  const on = chosen ?? screenHere();
+  if (on !== game.pad) setPad(on);
+  return [on, (v) => (setPad(v), setChosen(v))];
+}
+
+function Screen() {
+  useSyncExternalStore(subscribe, getVersion);
+  return (
+    <div className="gt gt-is-tv">
+      <Scene />
+      <TvHud />
+    </div>
+  );
+}
+
+function Player() {
+  useSpawnOnEnv();
+  const [pad, choosePad] = usePad();
+  if (pad) return <PadView onShowRoom={() => choosePad(false)} />;
+  return (
+    <div className="gt">
+      <Scene />
+      <Hud onPad={screenHere() ? () => choosePad(true) : undefined} />
+      <Controls />
+    </div>
+  );
+}
+
+let started = false;
+/** The big screen: its own room code (from ?tv=ABCD, or a new one), connected as a spectator host. */
+function startTv() {
+  if (started) return;
+  started = true;
+  game.tv = true;
+  game.me.name = 'TV';
+  const code = clean(PARAMS.get('tv') ?? '') || clean(PARAMS.get('room') ?? '');
+  const room = code.length === 4 ? code : newCode();
+  const url = new URL(location.href);
+  url.searchParams.set('tv', room);
+  url.searchParams.delete('room');
+  history.replaceState(null, '', url);
+  void connect(room, getEnvironment(PARAMS.get('env')).id);
+}
+
 export default function App() {
   const [joined, setJoined] = useState(false);
+  const [demo, setDemo] = useState(DEMO);
 
   useEffect(() => {
     // no pinch-zooming the page itself on a phone; the room has its own zoom
@@ -178,12 +274,24 @@ export default function App() {
     void connect(room, env);
   };
 
-  if (!joined) return <Door onJoin={join} />;
-  return (
-    <div className="gt">
-      <Scene />
-      <Hud />
-      <Controls />
-    </div>
-  );
+  if (demo) {
+    startDemo(PARAMS.get('env'));
+    return <Screen />;
+  }
+  if (TV) {
+    startTv();
+    return <Screen />;
+  }
+  if (!joined)
+    return (
+      <Door
+        onJoin={join}
+        onDemo={() => {
+          unlock();
+          history.replaceState(null, '', '/?demo');
+          setDemo(true);
+        }}
+      />
+    );
+  return <Player />;
 }

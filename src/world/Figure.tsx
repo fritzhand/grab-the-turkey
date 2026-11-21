@@ -23,6 +23,7 @@ export interface FigureState {
   speed: number;
   flags: number;
   visible: boolean;
+  holding: boolean;
 }
 
 type Anim = {
@@ -40,7 +41,7 @@ export function Figure({ color, name, read, me = false }: { color: number; name:
   const shirt = PLAYER_COLORS[color % PLAYER_COLORS.length];
   const material = useMemo(() => rampMaterial({ colorInfo: true, skin: color % 4, color: shirt }), [shirt, color]);
   const anim = useRef<Anim | null>(null);
-  const st = useRef<FigureState>({ x: 0, z: 0, facing: 0, speed: 0, flags: 0, visible: true });
+  const st = useRef<FigureState>({ x: 0, z: 0, facing: 0, speed: 0, flags: 0, visible: true, holding: false });
   const crouch = useRef(1);
 
   useEffect(() => {

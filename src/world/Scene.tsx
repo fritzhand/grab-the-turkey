@@ -4,6 +4,7 @@
  */
 import { Canvas } from '@react-three/fiber';
 import { game } from '../game/store';
+import { TvMarkers } from './TvMarkers';
 import { TvRig } from './TvRig';
 import { SplitRig } from './SplitRig';
 import { splitOf } from '../env';
@@ -25,6 +26,7 @@ function Cameras() {
   return (
     <>
       {game.tv ? <TvRig /> : <CameraRig />}
+      {game.tv && <TvMarkers />}
       {split && <SplitRig />}
       {!split && <Effects />}
     </>

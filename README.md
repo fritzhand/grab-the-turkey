@@ -21,7 +21,7 @@ The game is the easy part. The fun is that **it can happen in your house**. Give
 
 Your own copy of the game, with your house in it, on your own website, played on your TV. Your AI does most of it.
 
-**1. Fork the repo.** Press **Fork** at the top of this page (or open [github.com/fritzhand/grab-the-turkey/fork](https://github.com/fritzhand/grab-the-turkey/fork)). Then clone your fork and run it. You need [Node.js](https://nodejs.org) 20+ and [Blender](https://www.blender.org/download/) (free; it runs headless, so nothing opens):
+**1. Fork the repo.** Press **Fork** at the top of this page (or open [github.com/fritzhand/grab-the-turkey/fork](https://github.com/fritzhand/grab-the-turkey/fork)). Then clone your fork and run it. You need [Node.js](https://nodejs.org) 20+, and for the painted look, [Blender](https://www.blender.org/download/) (free; it runs headless, so nothing opens):
 
 ```bash
 git clone https://github.com/<you>/grab-the-turkey.git && cd grab-the-turkey
@@ -42,24 +42,35 @@ A fork of a public repo is public, and your plan (the layout of your rooms) goes
 
 No MCP? Point your AI at [grab-the-turkey.vercel.app/llms-full.txt](https://grab-the-turkey.vercel.app/llms-full.txt), the same guide as one page.
 
-**3. Give it your floor plan and photos.** Put them in `homes/my-home/photos/` (that folder is in `.gitignore`, so your pictures never go to GitHub), or paste them into the chat. A listing's floor plan, the county's footprint, or a sketch with a tape measure, plus a few photos of each room. Then ask:
+**3. Choose the look.** Your home can be played in either of two looks, and both are made from the same plan, so you can switch without measuring again:
 
-> Use the grab-the-turkey tools to build my home. The floor plan and photos are in homes/my-home/photos/.
+| The White Room look | The painted home look |
+|---|---|
+| ![The Example Home in the White Room look: white walls and furniture as boxes on an endless white floor](docs/images/example-home-white.jpg) | ![The Example Home in the painted look: painted floors and walls, ink outlines, a yard](docs/images/example-home.jpg) |
+| **Your rooms as plain white boxes** on an endless white floor, like the game's White Room. Low walls with gaps for the doors, the furniture as boxes. No Blender: your AI writes it straight from the plan. Ready in minutes. | **Your home drawn in the storybook style** by headless Blender: painted floors and walls, ink outlines, the furniture, a yard with trees, and a roof that lifts off when the game starts. An afternoon, mostly your AI's. |
 
-Your agent writes `homes/my-home/plan.json` from the pictures (asking for any measurement it can't read), checks it with `check_plan`, builds it with headless Blender, compares the preview renders with your photos, fixes what's off, and adds it to the game. Clients that show MCP prompts also offer this as **build_my_home**.
+The same house, the Example Home, in both looks. The game is the same either way. Not sure? Start white: it plays in minutes, and the painted look is one Blender build away.
 
-**4. Make it yours.** In your place's file you choose pups or full-size walkers, one overhead shot or split screen, and whether the coins and the leprechaun are on. In [`src/game/tuning.ts`](src/game/tuning.ts) is every number: the round's length, the dog's name, how heavy the turkey is, how often the leprechaun shows up. Try it with `npm run dev`, or watch a whole game with `/?demo&env=my-home`.
+**4. Give it your floor plan and photos.** Put them in `homes/my-home/photos/` (that folder is in `.gitignore`, so your pictures never go to GitHub), or paste them into the chat. A listing's floor plan, the county's footprint, or a sketch with a tape measure, plus a few photos of each room. Then ask:
 
-**5. Deploy it to Vercel.** Push to your fork, then at [vercel.com/new](https://vercel.com/new) import the repo and press **Deploy**. [`vercel.json`](vercel.json) has every setting. In **Settings → Environment Variables**, set `VITE_APP_ID` to something of your own (say `my-family-turkey`) and redeploy, so your rooms are kept apart from everyone else's. Every push redeploys. Your copy serves the guide too, at `https://<your-project>.vercel.app/mcp`.
+> Use the grab-the-turkey tools to build my home in the painted look (or: the White Room look). The floor plan and photos are in homes/my-home/photos/.
 
-**6. Play it on the TV.** Open your site on the TV (or a laptop plugged into it) and press **📺 Put it on the TV**. Everyone scans the QR code with their phone, and the phones become the controllers: a stick and buttons, with the house on the big screen. [More below](#play-on-the-tv).
+Your agent writes `homes/my-home/plan.json` from the pictures (asking for any measurement it can't read) and checks it with `check_plan`. For the painted look, it builds the plan with headless Blender, compares the preview renders with your photos, and fixes what's off. For the White Room look, `place_file` turns the plan into white boxes, with no Blender. Either way, it then adds your home to the game. Clients that show MCP prompts also offer this as **build_my_home**.
+
+**5. Make it yours.** In your place's file you choose pups or full-size walkers, one overhead shot or split screen, and whether the coins and the leprechaun are on. In [`src/game/tuning.ts`](src/game/tuning.ts) is every number: the round's length, the dog's name, how heavy the turkey is, how often the leprechaun shows up. Try it with `npm run dev`, or watch a whole game with `/?demo&env=my-home`.
+
+**6. Deploy it to Vercel.** Push to your fork, then at [vercel.com/new](https://vercel.com/new) import the repo and press **Deploy**. [`vercel.json`](vercel.json) has every setting. In **Settings → Environment Variables**, set `VITE_APP_ID` to something of your own (say `my-family-turkey`) and redeploy, so your rooms are kept apart from everyone else's. Every push redeploys. Your copy serves the guide too, at `https://<your-project>.vercel.app/mcp`.
+
+**7. Play it on the TV.** Open your site on the TV (or a laptop plugged into it) and press **📺 Put it on the TV**. Everyone scans the QR code with their phone, and the phones become the controllers: a stick and buttons, with the house on the big screen. [More below](#play-on-the-tv).
 
 ## Build your own world
+
+The game comes with one place in each look:
 
 | The White Room | A painted home |
 |---|---|
 | ![The White Room: an endless white floor, a long table and plinths](docs/images/white-room.jpg) | ![The Example Home, built from homes/example-home/plan.json](docs/images/example-home.jpg) |
-| **The plain world.** An endless white floor, a table, a few plinths and full-size figures. There's nothing to build, and it plays anywhere. Start here if you just want a game tonight. Describe your own boxes in one TypeScript file and you have a quick, plain version of any room. | **Your home, drawn.** The Example Home was built entirely by the workflow below from [one plan file](homes/example-home/plan.json). Painted walls and floors, ink outlines, furniture, a yard, and a roof that lifts off when the game starts. Child-size pups play here, so there's room to run between the couch and the table. |
+| **The plain world.** An endless white floor, a table, a few plinths and full-size figures. There's nothing to build, and it plays anywhere. Start here if you just want a game tonight. Your own home in this look is your plan as white boxes in one TypeScript file, which the MCP's `place_file` writes for you (or write the boxes by hand). | **Your home, drawn.** The Example Home was built entirely by the workflow below from [one plan file](homes/example-home/plan.json). Painted walls and floors, ink outlines, furniture, a yard, and a roof that lifts off when the game starts. Child-size pups play here, so there's room to run between the couch and the table. |
 
 ### The workflow: floor plan and photos to a playable home
 

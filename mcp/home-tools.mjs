@@ -2,6 +2,7 @@
 // llms-full.txt. Read-only, plain JavaScript. The steps take someone from forking the repo to playing their own home
 // on the TV, with their AI doing the measuring, the plan, the Blender build and the deploy in their own copy.
 import { checkPlan } from './check-plan.mjs';
+import { planToBoxes } from './plan-to-boxes.mjs';
 
 export const SERVER = { name: 'grab-the-turkey', title: 'Grab the Turkey: build your home' };
 
@@ -71,6 +72,24 @@ Half a meter off doesn't matter for a chase. Doors do: a pup needs about a meter
 **The game plays on one floor.** Pick the floor where the family gathers. A multi-level house can be one place per floor.`,
   },
   {
+    id: 'look',
+    title: 'Choose the look',
+    summary: 'the White Room look (white boxes on an endless white floor, no Blender) or the painted storybook home (built in Blender)',
+    guide: () => `There are two looks. Both start from the same plan file (the next step), so you can try one and switch to the other without measuring again.
+
+| | The White Room look | The painted home look |
+|---|---|---|
+| What it looks like | Your walls and furniture as plain white boxes on an endless white floor that fades into a white sky. Clean and quiet, like the game's White Room. | Your home drawn in the storybook style: painted floors and walls, ink outlines, the furniture, a yard with trees, and a roof that lifts off when the game starts. Like the game's Example Home. |
+| What it takes | The plan, and nothing else. place_file turns the plan into the boxes. | The plan, and Blender (free; it runs headless). |
+| Time | Minutes | An afternoon, with your AI doing most of it |
+| Best for | A game tonight, an office or a classroom, or a first try before the painted one | The holiday: the family sees its own living room on the TV |
+| Steps | plan, then add (place_file with \`style: "white"\`), skipping build | plan, build, then add (place_file with \`style: "painted"\`) |
+
+The game itself is the same in both: the turkey, the dog, the coins and the leprechaun, the TV and the phones. Either look can have pups or full-size walkers (customize).
+
+Not sure? Start with the White Room look. It plays in minutes, and the painted look is one Blender build away.`,
+  },
+  {
     id: 'plan',
     title: 'Write the plan',
     summary: 'homes/<id>/plan.json: the walls, doors, windows, rooms, furniture and where everyone starts, in meters',
@@ -91,9 +110,11 @@ Half a meter off doesn't matter for a chase. Doors do: a pup needs about a meter
   },
   {
     id: 'build',
-    title: 'Build it in Blender',
-    summary: 'headless Blender turns the plan into the painted model and the collision boxes that match it',
-    guide: () => `From the root of the repo:
+    title: 'Build it in Blender (the painted look)',
+    summary: 'headless Blender turns the plan into the painted model and the collision boxes that match it (skip this for the White Room look)',
+    guide: () => `**For the painted look.** Choosing the White Room look? Skip this step: place_file makes the boxes straight from the plan.
+
+From the root of the repo:
 
 \`\`\`bash
 blender -b --factory-startup --python-exit-code 1 --python blender/home.py -- homes/my-home/plan.json --preview build/previews
@@ -111,8 +132,10 @@ The build exits with an error if the plan breaks it; the message names the field
   {
     id: 'add',
     title: 'Add it to the game',
-    summary: 'a short file that names the place and points at the model and the layout',
-    guide: () => `A place is one TypeScript file in \`src/env/\`. place_file writes it for you: give it the id, a name, and one line for the lobby.
+    summary: 'one short file that puts your home in the list of places, in either look',
+    guide: () => `A place is one TypeScript file in \`src/env/\`. place_file writes it for you: give it the id, a name, one line for the lobby, and the look:
+- \`style: "painted"\` points at the model and the layout Blender wrote.
+- \`style: "white"\` (send the plan too) writes the walls and the furniture as white boxes, right in the file. The walls stay low (1.1 m) with gaps for the doors, so the TV sees over them. Change the plan? Run place_file again.
 
 1. Save it as \`src/env/my-home.ts\`.
 2. Add it to the list in \`src/env/index.ts\`. The first place in the list is the one the game starts in:
@@ -218,9 +241,53 @@ Meters, in game coordinates: x runs east, z runs south (north is -z), with (0, 0
 
 Typical sizes: a dining table 1.8–2.4 x 0.9–1.1 x 0.76; a couch 2.2–2.6 x 0.9 x 0.8; a kitchen counter 0.6 deep x 0.92; an island 2 x 0.9 x 0.92; a queen bed 1.6 x 2.1 x 0.6; a chair 0.45 x 0.45 x 0.9.`;
 
+const indexLine = (id, ident) => `Then in \`src/env/index.ts\` (the first place in the list is the default):
+
+\`\`\`ts
+import { ${ident} } from './${id}';
+export const ENVIRONMENTS: Environment[] = [${ident}, whiteRoom, exampleHome];
+\`\`\`
+
+Run \`npm run build\` to check it.`;
+
+/** The White Room look: the plan's walls and furniture as white boxes, in the file itself. */
+const whiteFile = ({ id, name, blurb, cast = 'pups', screen = 'overview' }, plan, palette) => {
+  const ident = id.replace(/-([a-z0-9])/g, (_, ch) => ch.toUpperCase());
+  const b = planToBoxes(plan, palette);
+  const piece = (p) => `    { ${JSON.stringify(p).slice(1, -1).replace(/"([a-z]+)":/g, '$1: ').replace(/,(?=[a-z]+: )/g, ', ')} },`;
+  return `\`src/env/${id}.ts\`, in the White Room look (no Blender, no model):
+
+\`\`\`ts
+/**
+ * ${name}, in the White Room look: the walls and furniture of homes/${id}/plan.json as white boxes on
+ * the endless white floor. The walls stay low, with gaps for the doors, so the TV sees over them.
+ * Written by place_file from the plan; change the plan and write it again. For the painted look, build
+ * the plan with blender/home.py and use place_file with style "painted".
+ */
+import type { Environment } from './types';
+
+export const ${ident}: Environment = {
+  id: '${id}',
+  name: ${JSON.stringify(name)},
+  blurb: ${JSON.stringify(blurb)},
+  bounds: { kind: 'rect', hx: ${b.bounds.hx}, hz: ${b.bounds.hz} },
+  colors: { floor: '#f3f3f0', sky: '#f3f3f0', fog: [24, 70], pieces: '#fbfbf9', walls: '#e9e9e4' },
+  pieces: [
+${b.pieces.map(piece).join('\n')}
+  ],
+  cast: '${cast}',${screen === 'split' ? "\n  screen: 'split'," : ''}
+  spawns: ${JSON.stringify(b.spawns)},
+  dogStart: ${JSON.stringify(b.dogStart)},
+  turkeyStart: ${JSON.stringify(b.turkeyStart)},
+};
+\`\`\`
+
+${indexLine(id, ident)}`;
+};
+
 const placeFile = ({ id, name, blurb, cast = 'pups', screen = 'overview' }) => {
   const ident = id.replace(/-([a-z0-9])/g, (_, ch) => ch.toUpperCase());
-  return `\`src/env/${id}.ts\`:
+  return `\`src/env/${id}.ts\`, in the painted look:
 
 \`\`\`ts
 /**
@@ -249,19 +316,12 @@ export const ${ident}: Environment = {
 };
 \`\`\`
 
-Then in \`src/env/index.ts\` (the first place in the list is the default):
-
-\`\`\`ts
-import { ${ident} } from './${id}';
-export const ENVIRONMENTS: Environment[] = [${ident}, whiteRoom, exampleHome];
-\`\`\`
-
-Run \`npm run build\` to check it.`;
+${indexLine(id, ident)}`;
 };
 
 /**
  * The tools, prompts and full text for the site at `site` (its origin, no trailing slash).
- * @param {{ site: string, repo: string, examplePlan: any, palette: string[] }} c
+ * @param {{ site: string, repo: string, examplePlan: any, palette: string[], paletteHex?: Record<string, string> }} c
  */
 export function homeTools(c) {
   const ctx = { site: c.site, repo: c.repo, mcp: `${c.site}/mcp` };
@@ -276,16 +336,16 @@ ${list(RULES)}`;
 
 Grab the Turkey is a party game for one room full of people. The TV shows the house from above with the roof off; everyone plays on their phone. Every second you hold the turkey is a point. Five gold coins lie about at all times, and once a minute a leprechaun shows up, worth 25 caught by hand and 50 with the trap. The dog wants the turkey too.
 
-The fun is that it can happen in your house. A floor plan and a few photos become a plan file; headless Blender turns the plan into a painted model; the game plays in it.
+The fun is that it can happen in your house. A floor plan and a few photos become a plan file, and the plan becomes a place in one of two looks: **the White Room look** (your walls and furniture as white boxes on an endless white floor, in minutes, no Blender) or **the painted home look** (drawn in the storybook style by headless Blender, with a yard and a roof that lifts off). Step 3 compares them.
 
 **How this works.** This guide (${ctx.mcp}) is read-only: it explains each step and checks your plan. You and your AI do the work in your own copy of the repo (${c.repo}), on your computer.
 
 **The steps, in order**
 ${STEPS.map((s, i) => `${i + 1}. ${s.title}: ${s.summary} (get_step "${s.id}")`).join('\n')}
 
-**Tools along the way:** plan_format (every field of a plan), example_plan (a whole one), check_plan (checks yours), place_file (writes the file that adds your home to the game).
+**Tools along the way:** plan_format (every field of a plan), example_plan (a whole one), check_plan (checks yours), place_file (writes the file that adds your home to the game, in either look).
 
-Start where the person is. With nothing yet: step 1. With a fork and Blender: step 2. With a plan: check_plan, then step 4. With a home that plays: step 8. On the night: step 9.
+Start where the person is. With nothing yet: step 1. With a fork: step 2. With a plan: check_plan, then step 5 for the painted look or step 6 for the White Room look. With a home that plays: step 9. On the night: step 10.
 
 **Rules for the AI helping**
 ${list(RULES)}
@@ -337,7 +397,7 @@ ${JSON.stringify(c.examplePlan, null, 2)}
     {
       name: 'place_file',
       title: 'The file that adds your home',
-      description: 'Writes src/env/<id>.ts, the file that adds a built home to the game, and the line for src/env/index.ts.',
+      description: 'Writes src/env/<id>.ts, the file that adds a home to the game, and the line for src/env/index.ts. style "painted" (the default) points at the model Blender built; style "white" turns the plan into white boxes in the White Room look, with no Blender (send the plan).',
       inputSchema: object(
         {
           id: { type: 'string', pattern: '^[a-z0-9]+(-[a-z0-9]+)*$', description: 'The plan\'s id, like "my-home".' },
@@ -345,10 +405,20 @@ ${JSON.stringify(c.examplePlan, null, 2)}
           blurb: { type: 'string', description: 'One line for the lobby.' },
           cast: { type: 'string', enum: ['pups', 'walkers'], description: 'Pups (child-size, the default for a house) or walkers (full-size).' },
           screen: { type: 'string', enum: ['overview', 'split'], description: 'One overhead shot on the TV (the default), or a pane per player.' },
+          style: { type: 'string', enum: ['painted', 'white'], description: 'The painted home look (built in Blender; the default), or the White Room look (white boxes from the plan, no Blender).' },
+          plan: { type: 'object', description: 'For style "white": the plan, as a JSON object.' },
+          plan_text: { type: 'string', description: 'For style "white": or the plan as JSON text.' },
         },
         ['id', 'name', 'blurb'],
       ),
-      run: (a) => placeFile(a),
+      run: (a) => {
+        if (a.style !== 'white') return placeFile(a);
+        const given = a.plan ?? a.plan_text;
+        if (given === undefined) return 'The White Room look is made from the plan: send it in "plan" (an object) or "plan_text" (JSON text).';
+        const checked = checkPlan(given, { palette: c.palette });
+        if (!checked.ok) return `Fix the plan first (check_plan has the details):\n${list(checked.errors)}`;
+        return whiteFile(a, typeof given === 'string' ? JSON.parse(given) : given, c.paletteHex ?? {});
+      },
     },
   ].map((t) => ({ ...t, annotations: { title: t.title, ...READ_ONLY } }));
 
@@ -358,7 +428,7 @@ ${JSON.stringify(c.examplePlan, null, 2)}
       title: 'Build my home',
       description: 'From a floor plan and photos to a home you can play in, step by step.',
       arguments: [{ name: 'home', description: 'What to call it, like "Grandma\'s house"', required: false }],
-      text: ({ home }) => `I want to play Grab the Turkey in ${home ? `"${home}"` : 'my home'}. Use the grab-the-turkey tools: start with get_started, then take me through the steps one at a time. I'll give you a floor plan and photos of each room. Keep them in homes/<id>/photos/ so they never go to git. Write the plan from them (ask me for any measurement you can't read), run check_plan, build it with headless Blender, look at the previews against my photos and fix what's off, then add it to the game and let me try it. Ask before you push or deploy anything.`,
+      text: ({ home }) => `I want to play Grab the Turkey in ${home ? `"${home}"` : 'my home'}. Use the grab-the-turkey tools: start with get_started, then take me through the steps one at a time. I'll give you a floor plan and photos of each room. Keep them in homes/<id>/photos/ so they never go to git. Ask me which look I want (the White Room look or the painted home look; get_step "look" compares them). Write the plan from my pictures (ask me for any measurement you can't read) and run check_plan. For the painted look, build it with headless Blender, look at the previews against my photos and fix what's off; for the White Room look, use place_file with style "white". Then add it to the game and let me try it. Ask before you push or deploy anything.`,
     },
     {
       name: 'deploy_my_fork',

@@ -17,11 +17,12 @@ export function clock(ms: number): string {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 }
 
-/** Held time, to the tenth below a minute. */
+/**
+ * A score, as points: a second holding the turkey is a point, a turkey token a point, the leprechaun 25 by hand
+ * and 50 trapped (double for whoever holds the turkey). The game keeps thousandths; the points tick each second.
+ */
 export function held(ms: number): string {
-  const s = ms / 1000;
-  if (s < 60) return `${s.toFixed(1)}s`;
-  return `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+  return String(Math.floor(ms / 1000));
 }
 
 export function nameOf(snap: Snapshot, id: string | undefined): string {
@@ -53,6 +54,16 @@ function say(snap: Snapshot, e: GameEvent): string {
       return `${T.dogName} dropped the turkey`;
     case 'throw':
       return `${a} threw the turkey!`;
+    case 'token':
+      return `${b} found a turkey token  +${e.n ?? T.tokenPoints}`;
+    case 'lep':
+      return 'A leprechaun! Grab the trap, then catch it';
+    case 'trap':
+      return `${b} ${b === 'You' ? 'have' : 'has'} the trap!`;
+    case 'caught':
+      return e.a === 'trap' ? `${b} trapped the leprechaun!  +${e.n ?? T.lepPoints}` : `${b} caught the leprechaun by hand!  +${e.n ?? T.lepHandsPoints}`;
+    case 'gone':
+      return 'The leprechaun slipped away';
   }
 }
 
@@ -200,7 +211,7 @@ function Lobby({ snap }: { snap: Snapshot }) {
 export function Results({ snap }: { snap: Snapshot }) {
   const rows = snap.last?.scores ?? [];
   const [first] = rows;
-  const winner = first ? (first[0] === game.me.id ? 'You win!' : `${first[0] === DOG_ID ? T.dogName : first[1]} wins!`) : 'Nobody held the turkey';
+  const winner = first ? (first[0] === game.me.id ? 'You win!' : `${first[0] === DOG_ID ? T.dogName : first[1]} wins!`) : 'Nobody scored';
   return (
     <div className="gt-panel gt-results">
       <p className="gt-eyebrow">Round {snap.last?.round ?? snap.round} is over</p>
@@ -211,10 +222,52 @@ export function Results({ snap }: { snap: Snapshot }) {
             <span className="gt-rank">{i + 1}</span>
             <span className="gt-dot" style={{ background: colorOf(snap, id) }} />
             <span className="gt-board-name">{id === DOG_ID ? `${T.dogName} (the dog)` : name}</span>
-            <span className="gt-board-time">{held(ms)}</span>
+            <span className="gt-board-time">{held(ms)} pts</span>
           </li>
         ))}
       </ol>
+    </div>
+  );
+}
+
+/**
+ * The leprechaun hunt, in words, and (with a camera behind you) an arrow to what to go for next: the trap first,
+ * then the leprechaun with the trap on your back. Not there when there is no leprechaun.
+ */
+export function Hunt({ snap, arrow }: { snap: Snapshot; arrow: boolean }) {
+  const lep = snap.lep;
+  if (!lep || snap.phase !== 'play') return null;
+  const trap = snap.trap;
+  const by = trap?.by ?? null;
+  let text: string;
+  let target: [number, number] | null = null;
+  if (lep.by) text = lep.how === 'trap' ? `${nameOf(snap, lep.by)} trapped the leprechaun!` : `${nameOf(snap, lep.by)} caught the leprechaun!`;
+  else if (by && by === game.me.id) (text = 'You have the trap! Put it on the leprechaun'), (target = lep.p);
+  else if (by) (text = `${nameOf(snap, by)} has the trap`), (target = lep.p);
+  else if (trap) (text = 'A leprechaun is loose! Find the trap'), (target = trap.p);
+  else text = 'A leprechaun is loose!';
+
+  let pointer: React.ReactNode = null;
+  if (arrow && target && !game.tv) {
+    const dx = target[0] - game.me.pos.x;
+    const dz = target[1] - game.me.pos.z;
+    const yaw = game.cam.yaw;
+    // the screen's up is away from the camera: (-sin yaw, -cos yaw); its right is (cos yaw, -sin yaw)
+    const angle = Math.atan2(dx * Math.cos(yaw) - dz * Math.sin(yaw), -dx * Math.sin(yaw) - dz * Math.cos(yaw));
+    pointer = (
+      <span className="gt-hunt-point">
+        <span className="gt-hunt-arrow" style={{ transform: `rotate(${angle}rad)` }}>
+          ▲
+        </span>
+        {Math.round(Math.hypot(dx, dz))} m
+      </span>
+    );
+  }
+  return (
+    <div className="gt-hunt" role="status">
+      <span className="gt-hunt-icon">☘</span>
+      <span className="gt-hunt-text">{text}</span>
+      {pointer}
     </div>
   );
 }
@@ -225,7 +278,7 @@ export function Banner({ snap }: { snap: Snapshot }) {
   if (mine)
     return (
       <div className="gt-banner is-mine">
-        You have the turkey! <strong>{held(snap.scores[game.me.id] ?? 0)}</strong>
+        You have the turkey! <strong>{held(snap.scores[game.me.id] ?? 0)} pts</strong>
       </div>
     );
   if (snap.holder === DOG_ID) return <div className="gt-banner is-dog">{T.dogName} has the turkey. Get it back!</div>;
@@ -249,7 +302,7 @@ export function Hud({ onPad }: { onPad?: () => void } = {}) {
 
   const between = snap.phase === 'lobby' || snap.phase === 'over';
   return (
-    <div className="gt-hud">
+    <div className={`gt-hud ${snap.lep && snap.phase === 'play' ? 'is-hunt' : ''}`}>
       <div className="gt-top">
         <Board snap={snap} />
         <div className="gt-clock">
@@ -273,6 +326,7 @@ export function Hud({ onPad }: { onPad?: () => void } = {}) {
         </div>
       </div>
       <Banner snap={snap} />
+      <Hunt snap={snap} arrow />
       <Toasts snap={snap} />
       {between && (
         <div className="gt-center">

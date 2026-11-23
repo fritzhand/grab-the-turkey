@@ -116,21 +116,35 @@ def build():
 
 
 def preview():
-    from build import render  # reuse the Workbench stills
-    import build
-    build.PREVIEW = PREVIEW
+    """Workbench stills of the pup from the front, three-quarters and the back (a check on the shapes)."""
+    from mathutils import Vector
     os.makedirs(PREVIEW, exist_ok=True)
     scene = bpy.context.scene
-    render('pup_front', (0.0, 3.2, 0.75), (0, 0, 0.7), lens=60, size=(700, 900), color='MATERIAL')
-    render('pup_34', (2.0, 2.6, 1.0), (0, 0, 0.7), lens=60, size=(700, 900), color='MATERIAL')
-    render('pup_back', (-1.5, -2.8, 1.0), (0, 0, 0.7), lens=60, size=(700, 900), color='MATERIAL')
+    scene.render.engine = 'BLENDER_WORKBENCH'
+    scene.render.resolution_x, scene.render.resolution_y = 700, 900
+    scene.display.shading.light = 'STUDIO'
+    scene.display.shading.color_type = 'MATERIAL'
+    scene.display.shading.show_object_outline = True
+    cam = bpy.data.objects.new('preview_cam', bpy.data.cameras.new('preview_cam'))
+    cam.data.lens = 60
+    scene.collection.objects.link(cam)
+    scene.camera = cam
+    for name, at in (('pup_front', (0.0, -3.2, 0.75)), ('pup_34', (2.0, -2.6, 1.0)), ('pup_back', (-1.5, 2.8, 1.0))):
+        cam.location = Vector(at)
+        cam.rotation_euler = (Vector((0, 0, 0.7)) - cam.location).to_track_quat('-Z', 'Y').to_euler()
+        scene.render.filepath = os.path.join(PREVIEW, f'{name}.png')
+        bpy.ops.render.render(write_still=True)
+    bpy.data.objects.remove(cam)
 
 
 def export():
     os.makedirs(os.path.dirname(GLB), exist_ok=True)
-    bpy.ops.export_scene.gltf(filepath=GLB, export_format='GLB', export_apply=True, export_yup=True,
-                              export_cameras=False, export_lights=False, export_extras=False,
-                              export_image_format='NONE')
+    props = bpy.ops.export_scene.gltf.get_rna_type().properties.keys()
+    kw = dict(filepath=GLB, export_format='GLB', export_apply=True, export_yup=True,
+              export_cameras=False, export_lights=False, export_extras=False)
+    if 'export_image_format' in props:
+        kw['export_image_format'] = 'NONE'
+    bpy.ops.export_scene.gltf(**kw)
     print('EXPORTED', GLB, os.path.getsize(GLB), 'bytes')
 
 

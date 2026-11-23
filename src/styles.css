@@ -1245,3 +1245,113 @@ select {
 .gt-tv.is-split .gt-tv-join-code {
   font-size: 1.8em;
 }
+
+/* ---------------------------------------------------------------- the leprechaun hunt */
+
+.gt-hunt {
+  position: absolute;
+  top: calc(var(--safe-t) + 74px);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(100% - 24px);
+  padding: 6px 14px 6px 10px;
+  border-radius: 999px;
+  background: #e7f2dc;
+  border: 1.5px solid #4c9a4c;
+  box-shadow: 0 4px 14px rgba(40, 90, 40, 0.18);
+  color: #1f4a22;
+  font-weight: 600;
+  font-size: 0.88rem;
+  white-space: nowrap;
+  pointer-events: none;
+  animation: gt-hunt 0.45s cubic-bezier(0.2, 1.5, 0.4, 1);
+}
+
+@keyframes gt-hunt {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) scale(0.85);
+  }
+}
+
+.gt-hunt-icon {
+  font-size: 1.15em;
+  color: #2f8f46;
+}
+
+.gt-hunt-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gt-hunt-point {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding-left: 8px;
+  border-left: 1.5px solid rgba(76, 154, 76, 0.4);
+  font-family: var(--mono);
+  font-size: 0.85em;
+}
+
+.gt-hunt-arrow {
+  display: inline-block;
+  width: 1.4em;
+  height: 1.4em;
+  line-height: 1.4em;
+  text-align: center;
+  border-radius: 50%;
+  background: #2f8f46;
+  color: #fff;
+  font-size: 0.8em;
+  transition: transform 0.12s linear;
+}
+
+/* with the chip up, the banner and the toasts move down a line */
+.gt-hud.is-hunt .gt-banner {
+  top: calc(var(--safe-t) + 118px);
+}
+
+.gt-hud.is-hunt .gt-toasts {
+  top: calc(var(--safe-t) + 164px);
+}
+
+@media (max-width: 560px) {
+  .gt-hunt {
+    top: auto;
+    bottom: calc(var(--safe-b) + 248px);
+    font-size: 0.8rem;
+    white-space: normal;
+    border-radius: 18px;
+    line-height: 1.25;
+  }
+  .gt-hud.is-hunt .gt-banner {
+    top: auto;
+    bottom: calc(var(--safe-b) + 200px);
+  }
+  .gt-hud.is-hunt .gt-toasts {
+    top: auto;
+    bottom: calc(var(--safe-b) + 296px);
+  }
+}
+
+.gt-tv .gt-hunt {
+  top: calc(1.4vw + 6.6em);
+  font-size: 1.3em;
+}
+
+.gt-tv.is-hunt .gt-banner {
+  top: calc(1.4vw + 10.4em);
+}
+
+.gt-tv.is-hunt .gt-toasts {
+  top: calc(1.4vw + 14.6em);
+}
+
+.gt-padview .gt-hunt {
+  top: auto;
+  bottom: calc(var(--safe-b) + 262px);
+}

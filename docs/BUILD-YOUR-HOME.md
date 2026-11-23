@@ -15,6 +15,16 @@ There are two routes:
 
 Both start with the same measuring.
 
+## 0. Your own copy, and your AI
+
+Fork the repo on GitHub, clone your fork, and run `npm install`. Then connect your coding agent to the game's MCP server, which holds this whole guide as tools, plus a plan checker:
+
+```bash
+claude mcp add --transport http grab-the-turkey https://grab-the-turkey.vercel.app/mcp   # Claude Code
+```
+
+Codex, Cursor, Claude and ChatGPT take the same address as a remote MCP server (the README has each one). Without MCP, point your AI at `https://grab-the-turkey.vercel.app/llms-full.txt`. Then give it your pictures (step 1) and ask it to build your home with the grab-the-turkey tools. It follows the steps below, and you check its work.
+
 ## 1. Measure the house
 
 You need the outline of the house and where the walls, doors, windows and big furniture are, in meters. Good sources, from easiest to best:
@@ -24,6 +34,8 @@ You need the outline of the house and where the walls, doors, windows and big fu
 - **Map data.** OpenStreetMap often has the building's footprint, and satellite view in any map app lets you measure the outside walls. That gives you the outline and which way it faces.
 - **A tape measure, or your phone.** Apple's Measure app, or any LiDAR scanning app (Polycam, Scaniverse, RoomPlan-based apps), can measure each room. Some export a floor plan directly.
 - **Photos.** A few of each room. They tell you where the couch, the island and the dining table go, and what color things are.
+
+Keep all of it in `homes/my-home/photos/`. That folder is in `.gitignore`, so pictures of your home never go to GitHub, even when the plan does.
 
 Don't fuss over accuracy. Half a meter off doesn't matter for a chase. A door does matter: players need about a meter to get through one.
 
@@ -71,6 +83,10 @@ Copy [`homes/example-home/plan.json`](../homes/example-home/plan.json) to `homes
 **Let a coding agent do it.** Give it the floor plan and the photos:
 
 > Here is a floor plan of my home and photos of each room. Write `homes/my-home/plan.json` in the format of `homes/example-home/plan.json` (the format is documented at the top of `blender/home.py`). Measure the walls from the plan, put the doors and windows where they are, place the big furniture from the photos, and pick colors that match. Then build it with headless Blender, look at the preview renders, fix anything that's off, and add it to the game as an environment like `src/env/example-home.ts`.
+
+### Check it
+
+Before building, have your AI run the MCP server's `check_plan` tool on the plan (or run it yourself: `npm run check-plan -- homes/my-home/plan.json`). It catches walls that go diagonally, doors past the end of their wall, spawns inside the couch and a turkey inside the table, and warns about doors too narrow for a chase.
 
 ### Build it
 
@@ -134,7 +150,12 @@ Open the site, choose your home in **Where you are playing**, and walk the rooms
 
 - you can get through every door (if not, widen it in the plan and rebuild);
 - the turkey sits on the table, not inside it;
+- the coins and the leprechaun turn up in every room (a room that never gets any can't be walked into: a door is missing);
 - nothing traps the dog (it slides along walls, but a dead-end corner of furniture can hold it);
 - on the TV, everyone is readable (if not, consider `screen: 'split'`).
 
-Then push, deploy, and send the link to the family group chat.
+## 6. Deploy it and play
+
+Push to your repo, import it at [vercel.com/new](https://vercel.com/new), and press **Deploy** (`vercel.json` has the settings). Set `VITE_APP_ID` to something of your own in the project's environment variables and redeploy, so your rooms are kept apart. Then open your site on the TV, press **📺 Put it on the TV**, and have everyone scan the QR code: their phones are the controllers.
+
+Send the link to the family group chat.

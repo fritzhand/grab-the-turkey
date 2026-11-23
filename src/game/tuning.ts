@@ -91,6 +91,34 @@ const BASE = {
   /** How high a turkey can sit and still be picked up, by a player and by the dog. */
   pickupHeightMax: 1.4,
   dogHeightMax: 1.0,
+
+  // --- turkey tokens and the leprechaun (a place can switch them off: extras: false)
+  /** There are always this many turkey tokens about; collect one and another turns up somewhere else. */
+  tokenCount: 5,
+  tokenPoints: 1,
+  tokenReach: 0.75,
+  /** Holding the turkey when you collect a token or catch the leprechaun: the points count double. */
+  holdMultiplier: 2,
+  /** Once a minute a leprechaun shows up, and stays this long unless it is caught. */
+  lepEverySeconds: 60,
+  lepStaySeconds: 45,
+  lepSpeed: 4.4,
+  lepWanderSpeed: 1.7,
+  lepRadius: 0.22,
+  /** It runs from anyone this close, and hops away (out of sight, in again near by) from anyone closer than lepHopRange. */
+  lepFleeRange: 4.5,
+  lepHopRange: 1.5,
+  lepHopMin: 5,
+  lepHopMax: 8,
+  /** Pick the trap up by touch, put it on the leprechaun by touch (or a lunge): 50 points. By hand, 25. */
+  trapReach: 0.95,
+  lepReach: 1.08,
+  lepPoints: 50,
+  lepHandsPoints: 25,
+  /** How long the trap stays over it before it pops (and the leprechaun, caught by hand, before it vanishes). */
+  lepTrapSeconds: 3,
+  lepHandsSeconds: 0.9,
+
   /** How far the camera sits behind you, and the height it looks at. */
   camDist: 11,
   camLookY: 1.0,
@@ -100,6 +128,7 @@ const BASE = {
 const SIZES = [
   'bodyRadius', 'touchReach', 'lungeReach', 'pickupReach', 'catchReach', 'catchHeightMax', 'turkeyRadius',
   'dogReach', 'dogRadius', 'pickupHeightMax', 'dogHeightMax', 'camDist', 'camLookY',
+  'tokenReach', 'lepRadius', 'trapReach', 'lepReach',
 ] as const;
 
 /** The live numbers: BASE, with the sizes scaled for the environment being played. */

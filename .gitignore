@@ -8,3 +8,5 @@ dist
 !.env.example
 __pycache__/
 build/
+# Your home's photos and floor plan: for building the plan, never for GitHub
+homes/*/photos/

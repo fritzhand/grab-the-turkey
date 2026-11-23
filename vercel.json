@@ -3,10 +3,35 @@
   "framework": "vite",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
+  "rewrites": [
+    {
+      "source": "/mcp",
+      "destination": "/api/mcp"
+    },
+    {
+      "source": "/llms.txt",
+      "destination": "/api/mcp?llms=short"
+    },
+    {
+      "source": "/llms-full.txt",
+      "destination": "/api/mcp?llms=full"
+    }
+  ],
+  "functions": {
+    "api/mcp.mjs": {
+      "includeFiles": "{mcp/**,homes/example-home/plan.json,blender/lib.py}",
+      "maxDuration": 10
+    }
+  },
   "headers": [
     {
       "source": "/(models|walker)/(.*)",
-      "headers": [{ "key": "Cache-Control", "value": "public, max-age=604800, immutable" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=604800, immutable"
+        }
+      ]
     }
   ]
 }

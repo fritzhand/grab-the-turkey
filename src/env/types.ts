@@ -79,6 +79,11 @@ export interface Environment {
    * address forces it.
    */
   screen?: 'overview' | 'split';
+  /**
+   * Turkey tokens and the leprechaun (on by default). Tokens, the leprechaun and its trap turn up anywhere on the
+   * floor that can be walked to from the first spawn; set false for a plain game of keep-away.
+   */
+  extras?: boolean;
   /** Where players appear, in turn. */
   spawns: [number, number][];
   dogStart: [number, number];

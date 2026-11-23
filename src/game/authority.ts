@@ -1,9 +1,11 @@
 /**
  * The host's half of the game: the turkey, the dog, the scores and the clock. Exactly one phone
  * runs this at a time (the host); every other phone draws what it sends. It reads each player's
- * position from the poses they send, and decides who has the turkey.
+ * position from the poses they send, and decides who has the turkey. The tokens and the leprechaun are
+ * game/items.ts.
  */
 import { getEnvironment, groundAt, keepIn, keepOut, type Environment } from '../env';
+import { Items } from './items';
 import { getScale, T } from './tuning';
 import {
   AIR, DOG_CARRY, DOG_CHASE, DOG_ID, DOG_REST, F_DIP, HELD, REST,
@@ -54,11 +56,14 @@ export class Authority {
   private eventId = 0;
   /** Rounds run back to back: after the results, the next countdown starts by itself. */
   auto = false;
+  /** The turkey tokens, the leprechaun and its trap. */
+  private items = new Items();
 
   constructor(from: Snapshot, host: string) {
     this.s = structuredClone(from);
     this.s.host = host;
     this.eventId = from.events.reduce((n, e) => Math.max(n, e.id), 0);
+    this.items.adopt(this.s);
   }
 
   get env(): Environment {
@@ -97,6 +102,7 @@ export class Authority {
       if (s.phase !== 'lobby' && s.phase !== 'over') return;
       s.env = getEnvironment(i.id).id;
       this.resetProps();
+      this.items.clear(s);
     }
   }
 
@@ -140,6 +146,7 @@ export class Authority {
     this.turkeyStep(dt, env, bodies);
     this.takeStep(bodies);
     this.dogStep(dt, env, bodies);
+    this.items.step(s, env, bodies, dt, { event: (e) => this.event(e), lunging: (id) => (this.lunges.get(id) ?? 0) > this.clock });
     return s;
   }
 
@@ -155,6 +162,7 @@ export class Authority {
       s.scores = {};
       s.events = [];
       this.resetProps();
+      this.items.start(s, this.env);
     } else if (s.phase === 'play') {
       s.phase = 'over';
       s.left = 0;
@@ -167,6 +175,7 @@ export class Authority {
       s.holder = null;
       s.turkey.s = AIR;
       s.turkey.v = [0, 0, 0];
+      this.items.clear(s);
       if (this.auto) s.left = T.autoNextSeconds * 1000;
     } else if (this.auto && s.left <= 0 && s.last) {
       // the results have had their time: the next round

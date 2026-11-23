@@ -50,13 +50,15 @@ describe('the build-your-home guide over MCP', () => {
     const { tools } = await client.listTools();
     assert.deepEqual(tools.map((t) => t.name), ['get_started', 'get_step', 'plan_format', 'example_plan', 'check_plan', 'place_file']);
     for (const t of tools) assert.equal(t.annotations.readOnlyHint, true, t.name);
-    assert.deepEqual(tools.find((t) => t.name === 'get_step').inputSchema.properties.step.enum, ['fork', 'gather', 'plan', 'build', 'add', 'try', 'customize', 'deploy', 'play']);
+    assert.deepEqual(tools.find((t) => t.name === 'get_step').inputSchema.properties.step.enum, ['fork', 'gather', 'look', 'plan', 'build', 'add', 'try', 'customize', 'deploy', 'play']);
   });
 
   it('starts someone off, with links on the site it is served from', async () => {
     const text = textOf(await client.callTool({ name: 'get_started', arguments: {} }));
     assert.match(text, /1\. Fork the repo and connect your AI/);
-    assert.match(text, /9\. Play it on the TV/);
+    assert.match(text, /10\. Play it on the TV/);
+    assert.match(text, /3\. Choose the look/);
+    assert.match(text, /White Room look/);
     assert.match(text, /leprechaun/);
     assert.ok(text.includes(`${base}/mcp`), 'links use the request host');
     assert.ok(text.includes('https://github.com/fritzhand/grab-the-turkey'));
@@ -93,6 +95,27 @@ describe('the build-your-home guide over MCP', () => {
     assert.equal((await client.callTool({ name: 'place_file', arguments: { id: 'Lake House', name: 'x', blurb: 'y' } })).isError, true);
   });
 
+  it('offers both looks, and writes the White Room look straight from a plan', async () => {
+    const look = textOf(await client.callTool({ name: 'get_step', arguments: { step: 'look' } }));
+    assert.match(look, /The White Room look \| The painted home look/);
+    const build = textOf(await client.callTool({ name: 'get_step', arguments: { step: 'build' } }));
+    assert.match(build, /Skip this step/);
+    const plan = clone(example);
+    plan.furniture[0].name = "Grandma's table";
+    const white = textOf(await client.callTool({ name: 'place_file', arguments: { id: 'lake-house', name: 'The Lake House', blurb: 'In white.', style: 'white', plan } }));
+    assert.match(white, /in the White Room look/);
+    assert.doesNotMatch(white, /model:/);
+    assert.match(white, /\{ kind: "wall", name: "Hall wall", x: -7\.85, z: -1, w: 2\.5, d: 0\.2, h: 1\.1 \}/, 'the hall wall is split at its doors');
+    assert.match(white, /name: "Grandma's table"/);
+    assert.match(white, /color: "#d6b68a"/, 'palette names become hex colors');
+    assert.doesNotMatch(white, /Living room rug/, 'rugs are left out');
+    assert.match(white, /bounds: \{ kind: 'rect', hx: 8\.9, hz: 6\.4 \}/);
+    assert.match(textOf(await client.callTool({ name: 'place_file', arguments: { id: 'x', name: 'x', blurb: 'y', style: 'white' } })), /made from the plan/);
+    const broken = clone(example);
+    delete broken.house;
+    assert.match(textOf(await client.callTool({ name: 'place_file', arguments: { id: 'x', name: 'x', blurb: 'y', style: 'white', plan: broken } })), /Fix the plan first/);
+  });
+
   it('checks a plan, as an object or as text', async () => {
     const good = textOf(await client.callTool({ name: 'check_plan', arguments: { plan: example } }));
     assert.match(good, /The plan builds/);
@@ -118,7 +141,7 @@ describe('the build-your-home guide over MCP', () => {
     assert.equal(short.status, 200);
     assert.match(await short.text(), /MCP server: http:\/\/127\.0\.0\.1:\d+\/mcp/);
     const full = await (await fetch(`${base}/llms-full.txt`)).text();
-    for (const h of ['# Step 1: Fork the repo', '# Step 8: Deploy it to Vercel', '# Step 9: Play it on the TV', '# The plan format', "# The Example Home's plan"]) assert.ok(full.includes(h), h);
+    for (const h of ['# Step 1: Fork the repo', '# Step 3: Choose the look', '# Step 9: Deploy it to Vercel', '# Step 10: Play it on the TV', '# The plan format', "# The Example Home's plan"]) assert.ok(full.includes(h), h);
     const page = await fetch(`${base}/mcp`, { headers: { accept: 'text/html' } });
     assert.equal(page.status, 200);
     assert.match(await page.text(), /claude mcp add/);

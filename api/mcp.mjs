@@ -14,12 +14,12 @@ import { homeTools, SERVER } from '../mcp/home-tools.mjs';
 
 const VERSION = '1.0.0';
 const examplePlan = JSON.parse(readFileSync(new URL('../homes/example-home/plan.json', import.meta.url), 'utf8'));
-/** The palette's color names, read from blender/lib.py so the two never disagree. */
+/** The palette's color names and their hex colors, read from blender/lib.py so the two never disagree. */
 const palette = (() => {
   const lib = readFileSync(new URL('../blender/lib.py', import.meta.url), 'utf8');
   const block = lib.slice(lib.indexOf('PALETTE = {'), lib.indexOf('\n}', lib.indexOf('PALETTE = {')));
   const skip = new Set(['coat', 'point', 'muzzle', 'ear', 'ear_in', 'nose', 'eye', 'eye_hi', 'jumper', 'jumper_hem', 'foot', 'tail_tip', 'white']);
-  return [...block.matchAll(/'([a-z_]+)':\s*'#[0-9a-f]{6}'/gi)].map((m) => m[1]).filter((k) => !skip.has(k));
+  return Object.fromEntries([...block.matchAll(/'([a-z_]+)':\s*'(#[0-9a-f]{6})'/gi)].map((m) => [m[1], m[2]]).filter(([k]) => !skip.has(k)));
 })();
 
 /**
@@ -40,7 +40,7 @@ function origin(req) {
   return `${proto}://${host}`;
 }
 
-const tools = (req) => homeTools({ site: origin(req), repo: repo(), examplePlan, palette });
+const tools = (req) => homeTools({ site: origin(req), repo: repo(), examplePlan, palette: Object.keys(palette), paletteHex: palette });
 
 function createServer(req) {
   const t = tools(req);

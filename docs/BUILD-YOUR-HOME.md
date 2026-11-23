@@ -2,18 +2,19 @@
 
 The idea: before the holiday, build the house you're gathering in. After dinner, put it on the TV and play Grab the Turkey in it, everyone on their phone, the family running around its own living room.
 
-You don't need 3D skills. A place in this game is plain data, and the model is built by a script in headless Blender from one plan file. A coding agent can write the plan for you from a floor plan and photos.
+You don't need 3D skills. A place in this game is plain data. A coding agent can write it for you from a floor plan and photos.
 
-There are two routes:
+**There are two looks to choose from:**
 
-| | Boxes (the White Room way) | A painted home (the Example Home way) |
+| | The White Room look | The painted home look |
 |---|---|---|
-| What you write | `src/env/my-home.ts`: walls and furniture as boxes | `homes/my-home/plan.json`: walls, doors, windows, rooms, furniture |
-| What you get | Plain white boxes on a floor | A painted model: floors, walls, furniture, a yard, a roof that lifts off |
-| Tools | A text editor | A text editor and [Blender](https://www.blender.org) (free; it runs headless) |
-| Time | Half an hour | An afternoon |
+| | ![The Example Home in the White Room look](images/example-home-white.jpg) | ![The Example Home in the painted look](images/example-home.jpg) |
+| What you get | Your walls and furniture as plain white boxes on an endless white floor that fades into a white sky, like the game's White Room | Your home drawn in the storybook style: painted floors and walls, ink outlines, furniture, a yard, a roof that lifts off |
+| What you write | `homes/my-home/plan.json` (or the boxes by hand in `src/env/my-home.ts`) | `homes/my-home/plan.json` |
+| Then | The MCP's `place_file` with `style: "white"` turns the plan into boxes | Headless [Blender](https://www.blender.org) (free) builds the model from the plan |
+| Time | Minutes, once the plan is written | An afternoon |
 
-Both start with the same measuring.
+Both are the same house above (the Example Home), from the same plan. Both start with the same measuring, and you can switch looks later without measuring again.
 
 ## 0. Your own copy, and your AI
 
@@ -48,7 +49,7 @@ Lay the floor plan out with **north up**. In the game:
 
 Measure everything from that middle point. A wall 3 m west of the middle is at `x = -3`.
 
-## 3a. A painted home: write the plan
+## 3a. Write the plan (both looks)
 
 Copy [`homes/example-home/plan.json`](../homes/example-home/plan.json) to `homes/my-home/plan.json` and change it. The format is documented at the top of [`blender/home.py`](../blender/home.py). In short:
 
@@ -107,6 +108,10 @@ import { myHome } from './my-home';
 export const ENVIRONMENTS: Environment[] = [myHome, whiteRoom, exampleHome]; // the first is the default
 ```
 
+### The White Room look, from the same plan
+
+Skip Blender. Have your AI call the MCP's `place_file` with `style: "white"` and the plan: it writes `src/env/my-home.ts` with your walls (kept low at 1.1 m, with gaps for the doors) and your furniture as white boxes, on the endless white floor. Add it to the list in `src/env/index.ts` as above. Change the plan and write it again. Windows, rooms' floors, the roof and the yard belong to the painted look and are left out.
+
 ### Further than home.py
 
 `home.py` makes a good house out of boxes. For more (a deck, stairs, a wood stove, a pond, stone walls, the real roof line), write your own Blender script on the same helpers. The Carriage House in the README was built that way, by a coding agent working from photos. [`blender/lib.py`](../blender/lib.py) has the pieces: `MB` builds one object from boxes, prisms, cylinders, blobs and beams, `piece()` records a collision box, and `write_layout()` saves them. The game reads three groups by name:
@@ -117,9 +122,9 @@ export const ENVIRONMENTS: Environment[] = [myHome, whiteRoom, exampleHome]; // 
 
 Anything whose name starts with `o_` is outlined in ink. Have your script write the collision boxes as it builds, so they always match the model.
 
-## 3b. Boxes: write it down directly
+## 3b. The White Room look by hand
 
-For a quick plain version, skip Blender. Write the boxes in `src/env/my-home.ts`, using [`src/env/white-room.ts`](../src/env/white-room.ts) as the pattern. Each piece is a box:
+For a quick plain version of a single room, skip the plan too. Write the boxes in `src/env/my-home.ts`, using [`src/env/white-room.ts`](../src/env/white-room.ts) as the pattern. Each piece is a box:
 
 ```ts
 { kind: 'table', name: 'Dining table', x: 4.4, z: 2.0, w: 2.4, d: 1.1, h: 0.76, color: '#8a6e55' }

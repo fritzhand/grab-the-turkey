@@ -6,13 +6,53 @@
 
 *The Carriage House, a real home built with the workflow below: a floor plan and a few photos, turned into a painted model by headless Blender, and played on the TV from above while everyone runs their pup from their phone.*
 
-Grab the Turkey is a party game for one room full of people. Everyone opens a link on their phone, types a name, and chases the turkey. **Every second you hold it is a point.** Rounds last five minutes. Biscuit the dog wants the turkey too.
+Grab the Turkey is a party game for one room full of people. Everyone opens a link on their phone, types a name, and chases the turkey. **Every second you hold it is a point.** Gold turkey coins lie about the house, and once a minute a leprechaun shows up: catch it by hand for 25, or bring the trap for 50. Rounds last five minutes. Biscuit the dog wants the turkey too.
+
+**Play it now: [grab-the-turkey.vercel.app](https://grab-the-turkey.vercel.app)**
 
 The game is the easy part. The fun is that **it can happen in your house**. Give it a floor plan and some photos, and a script builds your rooms, furniture and yard in the game's storybook style. Then put it on the TV, and the family sees itself running around its own living room.
 
 - **On phones:** open the link, play. No app, no account, no server.
 - **On the TV:** the whole house from above with the roof off, a QR code to join, and a live leaderboard. Phones become controllers.
 - **In your own world:** your home, your office, your cabin, from a floor plan, with headless Blender doing the modeling. [Start here](#build-your-own-world).
+- **With your AI doing the work:** fork the repo, connect your coding agent to the game's MCP server, give it a floor plan and photos, and it builds your home and helps you deploy your own copy. [Make it yours](#make-it-yours-fork-build-deploy-play).
+
+## Make it yours: fork, build, deploy, play
+
+Your own copy of the game, with your house in it, on your own website, played on your TV. Your AI does most of it.
+
+**1. Fork the repo.** Press **Fork** at the top of this page (or open [github.com/fritzhand/grab-the-turkey/fork](https://github.com/fritzhand/grab-the-turkey/fork)). Then clone your fork and run it. You need [Node.js](https://nodejs.org) 20+ and [Blender](https://www.blender.org/download/) (free; it runs headless, so nothing opens):
+
+```bash
+git clone https://github.com/<you>/grab-the-turkey.git && cd grab-the-turkey
+npm install
+npm run dev          # http://localhost:5173
+```
+
+A fork of a public repo is public, and your plan (the layout of your rooms) goes in it. To keep it private, make a new private repo and push your clone there instead.
+
+**2. Connect your AI to the guide.** The game's site is also an MCP server, with the whole guide to building a home as tools: the steps, the plan format, a plan checker, and the file that adds your home to the game. Open your coding agent in your clone and add it:
+
+| Agent | Add the MCP server |
+|---|---|
+| Claude Code | `claude mcp add --transport http grab-the-turkey https://grab-the-turkey.vercel.app/mcp` |
+| Codex | in `~/.codex/config.toml`: `[mcp_servers.grab-the-turkey]` with `url = "https://grab-the-turkey.vercel.app/mcp"` |
+| Cursor | in `.cursor/mcp.json`: `{ "mcpServers": { "grab-the-turkey": { "url": "https://grab-the-turkey.vercel.app/mcp" } } }` |
+| Claude, ChatGPT, others | add `https://grab-the-turkey.vercel.app/mcp` as a custom connector |
+
+No MCP? Point your AI at [grab-the-turkey.vercel.app/llms-full.txt](https://grab-the-turkey.vercel.app/llms-full.txt), the same guide as one page.
+
+**3. Give it your floor plan and photos.** Put them in `homes/my-home/photos/` (that folder is in `.gitignore`, so your pictures never go to GitHub), or paste them into the chat. A listing's floor plan, the county's footprint, or a sketch with a tape measure, plus a few photos of each room. Then ask:
+
+> Use the grab-the-turkey tools to build my home. The floor plan and photos are in homes/my-home/photos/.
+
+Your agent writes `homes/my-home/plan.json` from the pictures (asking for any measurement it can't read), checks it with `check_plan`, builds it with headless Blender, compares the preview renders with your photos, fixes what's off, and adds it to the game. Clients that show MCP prompts also offer this as **build_my_home**.
+
+**4. Make it yours.** In your place's file you choose pups or full-size walkers, one overhead shot or split screen, and whether the coins and the leprechaun are on. In [`src/game/tuning.ts`](src/game/tuning.ts) is every number: the round's length, the dog's name, how heavy the turkey is, how often the leprechaun shows up. Try it with `npm run dev`, or watch a whole game with `/?demo&env=my-home`.
+
+**5. Deploy it to Vercel.** Push to your fork, then at [vercel.com/new](https://vercel.com/new) import the repo and press **Deploy**. [`vercel.json`](vercel.json) has every setting. In **Settings → Environment Variables**, set `VITE_APP_ID` to something of your own (say `my-family-turkey`) and redeploy, so your rooms are kept apart from everyone else's. Every push redeploys. Your copy serves the guide too, at `https://<your-project>.vercel.app/mcp`.
+
+**6. Play it on the TV.** Open your site on the TV (or a laptop plugged into it) and press **📺 Put it on the TV**. Everyone scans the QR code with their phone, and the phones become the controllers: a stick and buttons, with the house on the big screen. [More below](#play-on-the-tv).
 
 ## Build your own world
 
@@ -27,7 +67,7 @@ You don't need to know Blender. The model is built by a script, headless, from p
 
 **1. Gather pictures of the place.** A floor plan with dimensions (a listing's plan, the county's footprint, a phone LiDAR scan or a tape measure) and a handful of photos of each room. The plan gives the walls. The photos give the furniture and the colors.
 
-**2. Write the plan.** One JSON file, in meters, with (0, 0) at the middle of the house: the outside, the walls (with doors and windows), the rooms' floors, the furniture, and where the turkey starts. Copy [`homes/example-home/plan.json`](homes/example-home/plan.json). Or hand the pictures to a coding agent (Claude Code, Codex, Cursor) with a prompt like this:
+**2. Write the plan.** Keep your photos in `homes/my-home/photos/`, which git leaves out. One JSON file, in meters, with (0, 0) at the middle of the house: the outside, the walls (with doors and windows), the rooms' floors, the furniture, and where the turkey starts. Copy [`homes/example-home/plan.json`](homes/example-home/plan.json). Or hand the pictures to a coding agent (Claude Code, Codex, Cursor) with a prompt like this:
 
 > Here is a floor plan of my home and photos of each room. Write `homes/my-home/plan.json` in the format of `homes/example-home/plan.json` (the format is documented at the top of `blender/home.py`). Measure the walls from the plan, put the doors and windows where they are, place the big furniture from the photos, and pick colors that match. Then build it with headless Blender, look at the preview renders, fix anything that's off, and add it to the game as an environment like `src/env/example-home.ts`.
 
@@ -41,7 +81,7 @@ The script writes the model (`public/models/my-home.glb`) and the collision boxe
 
 ![The preview render: the Example Home from above with the roof off](docs/images/blender-preview.jpg)
 
-**4. Add it and play.** Copy [`src/env/example-home.ts`](src/env/example-home.ts) to `src/env/my-home.ts`, change the ids, and add it to the list in [`src/env/index.ts`](src/env/index.ts). Run `npm run dev`, choose your home in **Where you are playing**, and walk the rooms. Fix the plan and rebuild until the doors feel right.
+**4. Add it and play.** Copy [`src/env/example-home.ts`](src/env/example-home.ts) to `src/env/my-home.ts`, change the ids, and add it to the list in [`src/env/index.ts`](src/env/index.ts). Run `npm run dev`, choose your home under **Place**, and walk the rooms. Fix the plan and rebuild until the doors feel right.
 
 **Going further.** `home.py` builds a good house from boxes. The Carriage House went further, with a deck, stairs, a stove, a pond and stone walls. That came from a hand-written Blender script built on the same helpers ([`blender/lib.py`](blender/lib.py)), written by a coding agent working from the photos. Anything you can describe, it can build. Name the parts the game should outline in ink `o_…`, and put them in three groups: `GRP_Lower` (floor, furniture), `GRP_Upper` (upper walls and roof, lifted off in play) and `GRP_Site` (yard and trees).
 
@@ -95,6 +135,8 @@ A phone can still show the room: **Show the room here** on the controller (or **
 | Dodge | **Dodge**: a burst in the direction you are pushing | Shift |
 | Dip | **Dip**: duck under a grab (you crawl while down) | C or Ctrl |
 
+**The coins and the leprechaun.** Five gold turkey tokens lie about at all times, a point each; pick one up and another turns up somewhere else. Once a minute a leprechaun shows up and runs from anyone who comes near, hopping away when you get too close. Catch it by hand for **25 points**, or find the trap (a little wooden cage with a green arrow over it), touch it so it rides on your back, and put it on the leprechaun for **50**. A green chip says what to go for, with an arrow on your phone. **Holding the turkey doubles** coins and leprechauns. A place can switch them off with `extras: false`.
+
 <details>
 <summary><b>The physics, the dog, the sound and the achievements</b></summary>
 
@@ -123,13 +165,14 @@ Every sound is synthesized in the browser, so there are no audio files to licens
 - a whoosh for the dodge, a bloop for the dip, a swipe for the lunge, a rising whine while a throw winds up;
 - a bright chord when you get the turkey, a sad one when it's taken, a thud when it lands, and barks from Biscuit;
 - countdown beeps, a 30-second warning, ticks through the last ten seconds, and a horn (plus a flourish for the winner) at the end;
+- a coin for a turkey token, a jig when a leprechaun shows up, and a clang and a shower of coins when the trap comes down;
 - a harvest-folk music loop that picks up when the round starts and again in the last minute.
 
 The button under the room code cycles between music and effects, effects only, and off.
 
 ### Achievements
 
-Drumstick Defender (hold for 10 s), Gravy Guardian (30 s), Turkey Tycoon (60 s), First Grab, Interception! (catch someone else's throw), Dog Whisperer (take it back from the dog), and Final Buzzer (holding it when time runs out). They're in [`src/audio/director.ts`](src/audio/director.ts).
+Drumstick Defender (hold for 10 s), Gravy Guardian (30 s), Turkey Tycoon (60 s), First Grab, Interception! (catch someone else's throw), Dog Whisperer (take it back from the dog), Pot of Gold (trap the leprechaun), Quick Hands (catch it by hand), and Final Buzzer (holding it when time runs out). They're in [`src/audio/director.ts`](src/audio/director.ts).
 
 </details>
 
@@ -141,6 +184,7 @@ A place is one TypeScript file of plain data ([`src/env/types.ts`](src/env/types
 - **A model drawn in the storybook style** (`model: { url, painterly: true }`). Every surface is painted in flat washes with a wandering brush edge, and everything named `o_…` is outlined in brown ink ([`src/world/paint.ts`](src/world/paint.ts)). The model brings its own ground. Add `?roof` to keep the roof on.
 - **Collision pieces that aren't drawn** (`hidden: true`), when the model already shows the walls and furniture. `blender/home.py` writes them for you.
 - **Walkers or pups** (`cast: 'walkers' | 'pups'`). The pups are original child-size characters in jumpers in the player's color, made in Blender by [`blender/pup.py`](blender/pup.py). `?cast=pups` tries them anywhere.
+- **Coins and a leprechaun, or not** (`extras: false`). They turn up anywhere on the floor that can be walked to from the first spawn, so a room with no door never gets any.
 - **One shot or split screen on the TV** (`screen: 'overview' | 'split'`). See [big worlds](#big-worlds-and-more-than-one-floor-plan-for-the-tv).
 - **A phone scan** (Polycam, Scaniverse, RoomPlan) as plain scenery, or **the floor plan laid on the floor** as a guide. See [docs/BUILD-YOUR-HOME.md](docs/BUILD-YOUR-HOME.md).
 
@@ -169,6 +213,9 @@ Players on the same home Wi-Fi connect almost every time. Two phones on some cel
 npm install
 npm run dev          # http://localhost:5173 (and on your network, for phones)
 npm run build        # type-check and build to dist/
+npm run check-plan -- homes/my-home/plan.json   # check a home's plan before building it
+npm test             # the MCP server's tests, with the official MCP client
+npm run mcp:dev      # the MCP server at http://localhost:8787/mcp, to try in a client before you push
 ```
 
 To play yourself in two tabs with no network, add `?transport=local` to the address. Tabs on one device then play each other over a BroadcastChannel. For the TV setup, open `/?tv=TEST&transport=local` in one window and `/?room=TEST&transport=local` in another.
@@ -177,31 +224,38 @@ In the browser console, `grabTheTurkey.game` is the live game state.
 
 ## Deploy
 
-It's a static Vite site. Import the repo into Vercel (or any static host). [`vercel.json`](vercel.json) has the settings. The optional `/api/ice` function is the only server code, and the game works without it.
+It's a static Vite site, plus two small Vercel functions. Import the repo into Vercel at [vercel.com/new](https://vercel.com/new) and press **Deploy**. [`vercel.json`](vercel.json) has the settings, and every push to main redeploys.
 
-If you fork it, set `VITE_APP_ID` to something of your own so your rooms are kept apart from everyone else's.
+- **`/mcp`** ([`api/mcp.mjs`](api/mcp.mjs)): the build-your-home guide as a remote MCP server (Streamable HTTP, read-only, no sign-in), with `/llms.txt` and `/llms-full.txt` beside it. The tools are `get_started`, `get_step`, `plan_format`, `example_plan`, `check_plan` and `place_file`, and the content lives in [`mcp/`](mcp). A fork's deployment points its guide at the fork's own repo. Someone who opens `/mcp` in a browser gets a short page saying what it is.
+- **`/api/ice`** ([`api/ice.ts`](api/ice.ts)): optional TURN credentials. The game works without it.
+
+If you fork it, set `VITE_APP_ID` to something of your own so your rooms are kept apart from everyone else's. On another static host the game works the same, without `/mcp`.
 
 ## The code
 
 ```
 src/
-  env/        the places: types.ts (the format), white-room.ts, example-home.ts (+ its generated layout), index.ts
+  env/        the places: types.ts (the format), white-room.ts, example-home.ts (+ its generated layout), index.ts,
+              spots.ts (open floor that can be walked to, for the coins and the leprechaun)
   game/       tuning.ts (every number, and the cast's scale), types.ts (the wire), authority.ts (the host: turkey,
-              dog, scores, clock, back-to-back rounds), net.ts (host election, the TV as host), transport.ts
+              dog, scores, clock, back-to-back rounds), items.ts (the coins, the leprechaun and its trap), net.ts (host election, the TV as host), transport.ts
               (peer to peer, the relay, local tabs), Controller.tsx (your player's physics and keys), demo.ts
               (made-up players), store.ts
-  world/      the 3D scene: Figure (the walker), Pup (the pups), Dog, Turkey, Pieces (furniture), Room,
+  world/      the 3D scene: Figure (the walker), Pup (the pups), Dog, Turkey, Tokens, Leprechaun, Pieces (furniture), Room,
               PaintedModel + paint.ts (the storybook style), CameraRig (behind you), TvRig (the TV, from above),
               SplitRig (the TV, a pane per player)
   audio/      sound.ts (effects), music.ts (the loop), director.ts (what plays when; achievements)
   ui/         Hud (clock, scores, results), Controls (stick and buttons), TvHud (the TV), PadView (the controller)
 blender/      home.py (a home from a plan), pup.py (the pups), lib.py (helpers for building headless)
-homes/        plans: example-home/plan.json
+homes/        plans: example-home/plan.json (your photos go in homes/<id>/photos/, which git leaves out)
+mcp/          the build-your-home guide's content and tools, and check-plan.mjs (the plan checker)
+api/mcp.mjs   the MCP server at /mcp, with /llms.txt and /llms-full.txt
 api/ice.ts    optional TURN credentials
+test/         the MCP server's tests
 ```
 
 ## Credits
 
-The White Room's look and the walker come from the White Room on Jeremy Fritzhand's site. The walker and its animations are from [portfolio-map-3d](https://github.com/fritzhand/portfolio-map-3d) (MIT). The pups and the storybook look were made for this game. The dog is by [Quaternius](https://quaternius.com) and the turkey by [Kenney](https://kenney.nl), both CC0. Details are in [CREDITS.md](CREDITS.md).
+The White Room's look and the walker come from the White Room on Jeremy Fritzhand's site. The walker and its animations are from [portfolio-map-3d](https://github.com/fritzhand/portfolio-map-3d) (MIT). The pups, the leprechaun and the storybook look were made for this game. The dog is by [Quaternius](https://quaternius.com) and the turkey by [Kenney](https://kenney.nl), both CC0. Details are in [CREDITS.md](CREDITS.md).
 
 MIT License. See [LICENSE](LICENSE).

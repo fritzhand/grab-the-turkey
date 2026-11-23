@@ -14,7 +14,7 @@ import { DOG_ID } from '../game/types';
 import { intent } from '../game/net';
 import { fresh, game, getVersion, subscribe } from '../game/store';
 import { T } from '../game/tuning';
-import { Banner, Board, clock, colorOf, held, Results, SoundToggle, Toasts } from './Hud';
+import { Banner, Board, clock, colorOf, held, Hunt, Results, SoundToggle, Toasts } from './Hud';
 
 export function joinUrl(): string {
   return `${location.origin}/?room=${game.room}`;
@@ -135,7 +135,7 @@ export function TvHud() {
   const players = [...game.remotes.values()].filter((r) => fresh(r)).length;
   const split = splitOf(game.env);
   return (
-    <div className={`gt-hud gt-tv ${split ? 'is-split' : ''}`}>
+    <div className={`gt-hud gt-tv ${split ? 'is-split' : ''} ${snap.lep && snap.phase === 'play' ? 'is-hunt' : ''}`}>
       {split && <PaneLabels />}
       <div className="gt-top">
         <Board snap={snap} limit={10} />
@@ -154,6 +154,7 @@ export function TvHud() {
         <div className="gt-top-right">{!game.demo && <SoundToggle />}</div>
       </div>
       {!between && !split && <Banner snap={snap} />}
+      {!between && <Hunt snap={snap} arrow={false} />}
       <Toasts snap={snap} />
       {between && !game.demo && (
         <div className="gt-center">

@@ -102,6 +102,25 @@ export function direct(s: Snapshot | null): void {
       case 'throw':
         if (e.a !== me) sfx.throw(0.3);
         break;
+      case 'token':
+        if (mine) sfx.token();
+        break;
+      case 'lep':
+        sfx.leprechaun();
+        break;
+      case 'trap':
+        if (mine) sfx.trapUp();
+        break;
+      case 'caught':
+        if (mine) {
+          sfx.caught();
+          if (e.a === 'trap') award('lep', 'Pot of Gold', 'Trapped a leprechaun for fifty points');
+          else award('lephands', 'Quick Hands', 'Caught a leprechaun with your bare hands');
+        } else sfx.pop();
+        break;
+      case 'gone':
+        sfx.gone();
+        break;
     }
   }
 

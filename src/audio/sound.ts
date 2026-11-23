@@ -156,6 +156,30 @@ export const sfx = {
   lostIt() {
     [67, 63, 60].forEach((n, i) => tone(noteHz(n), noteHz(n) * 0.97, 0.26, 0.15, 'triangle', i * 0.09));
   },
+  /** A turkey token: a coin. */
+  token() {
+    tone(1318, 1318, 0.07, 0.12, 'square');
+    tone(1760, 1760, 0.22, 0.12, 'square', 0.07);
+  },
+  /** A leprechaun shows up: a little jig. */
+  leprechaun() {
+    [79, 83, 86, 83, 79, 91].forEach((n, i) => tone(noteHz(n), noteHz(n), 0.13, 0.11, 'triangle', i * 0.09));
+  },
+  /** You have the trap. */
+  trapUp() {
+    tone(330, 520, 0.1, 0.12, 'square');
+    tone(660, 660, 0.12, 0.1, 'triangle', 0.09);
+  },
+  /** The trap comes down: a clang, and a shower of coins. */
+  caught() {
+    tone(180, 90, 0.3, 0.3, 'sawtooth');
+    hiss(1800, 600, 0.25, 0.3, 2);
+    [84, 88, 91, 96, 100].forEach((n, i) => tone(noteHz(n), noteHz(n), 0.18, 0.12, 'square', 0.2 + i * 0.07));
+  },
+  /** It slipped away. */
+  gone() {
+    [67, 62].forEach((n, i) => tone(noteHz(n), noteHz(n) * 0.97, 0.22, 0.12, 'triangle', i * 0.12));
+  },
   /** Someone else's steal, across the room. */
   pop() {
     tone(660, 990, 0.07, 0.08, 'square');

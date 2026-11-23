@@ -6,7 +6,9 @@
  * The players are simple: whoever has the turkey runs from the nearest chaser (and the dog), away
  * from the walls, dodges when someone is close, dips now and then, and throws when cornered or
  * tired; everyone else runs at the holder (aiming a little ahead) and lunges when in reach, or at
- * the turkey when it is loose. The host's own rules decide every steal, catch and score.
+ * the turkey when it is loose. Along the way they pick up the turkey tokens near them, and when a leprechaun is
+ * loose the one nearest the trap fetches it and goes after the leprechaun (others try by hand). The host's own
+ * rules decide every steal, catch and score.
  *
  * ?demo&players=8 sets how many; ?demo&secs=90 how long a round lasts (default 75).
  */
@@ -80,6 +82,8 @@ export function startDemo(envId: string | null): void {
   });
 
   let last = performance.now();
+  /** Which token each runner is after, and until when, so they spread out instead of piling onto one. */
+  const claims = new Map<string, { id: number; until: number }>();
   timer = setInterval(() => {
     const now = performance.now();
     const dt = Math.min(0.1, (now - last) / 1000);
@@ -93,6 +97,38 @@ export function startDemo(envId: string | null): void {
     const hb = holder && holder !== DOG_ID ? bodies.get(holder) : null;
     const tk = s.turkey;
 
+    const tokenFor = (r: Runner): { x: number; z: number; d: number } | null => {
+      const tokens = s.tokens ?? [];
+      const make = (t: (typeof tokens)[number]) => ({ x: t.p[0], z: t.p[1], d: Math.hypot(t.p[0] - r.x, t.p[1] - r.z) });
+      const mine = claims.get(r.id);
+      if (mine && mine.until > now) {
+        const t = tokens.find((x) => x.id === mine.id);
+        if (t) return make(t);
+      }
+      const taken = new Set([...claims].filter(([id, c]) => id !== r.id && c.until > now).map(([, c]) => c.id));
+      const list = tokens.map((t) => ({ t, ...make(t) })).sort((a, b) => a.d - b.d);
+      const pick = list.find((x) => !taken.has(x.t.id)) ?? list[0];
+      if (!pick) return null;
+      claims.set(r.id, { id: pick.t.id, until: now + 5000 });
+      return pick;
+    };
+    /** What a runner goes for before the turkey: the trap and the leprechaun, or a token close by. */
+    const special = (r: Runner): { x: number; z: number } | null => {
+      const L = s.lep;
+      if (L && !L.by) {
+        const trap = s.trap;
+        const lepAt = { x: L.p[0], z: L.p[1] };
+        if (trap?.by === r.id) return lepAt;
+        if (trap && !trap.by) {
+          const d = (o: Runner) => Math.hypot(o.x - trap.p[0], o.z - trap.p[1]);
+          const best = runners.filter((o) => o.id !== holder).sort((a, b) => d(a) - d(b))[0];
+          if (best === r) return { x: trap.p[0], z: trap.p[1] };
+        } else if (Math.random() < 0.3) return lepAt;
+      }
+      const t = tokenFor(r);
+      return t && t.d < 6 && Math.random() < 0.6 ? t : null;
+    };
+
     for (const r of runners) {
       const mine = holder === r.id;
       r.dodge = Math.max(0, r.dodge - dt);
@@ -105,11 +141,14 @@ export function startDemo(envId: string | null): void {
       r.think -= dt;
 
       // --- where it wants to go
+      let sp: { x: number; z: number } | null;
       if (r.think <= 0) {
         r.think = 0.2 + Math.random() * 0.25;
         if (!playing) {
           // between rounds: mill about near the middle
           r.aim = { x: (Math.random() - 0.5) * 6, z: (Math.random() - 0.5) * 4 };
+        } else if (!mine && (sp = special(r))) {
+          r.aim = sp;
         } else if (mine) {
           // away from the nearest threats, and away from the edge
           let ax = 0;
@@ -181,6 +220,15 @@ export function startDemo(envId: string | null): void {
         }
       } else {
         r.windup = -1;
+        const L = s.lep;
+        if (playing && L && !L.by && r.lungeCd <= 0 && Math.hypot(L.p[0] - r.x, L.p[1] - r.z) < T.lungeReach * 0.95) {
+          // after the leprechaun: a lunge reaches farther than a touch
+          r.lunge = T.lungeSeconds;
+          r.lungeCd = T.lungeCooldown;
+          r.vx += Math.sin(r.f) * T.lungeBoost;
+          r.vz += Math.cos(r.f) * T.lungeBoost;
+          auth.intent(r.id, { k: 'lunge' }, bodies);
+        }
         if (playing && hb && r.lungeCd <= 0 && Math.hypot(hb.x - r.x, hb.z - r.z) < T.lungeReach * 0.95) {
           r.lunge = T.lungeSeconds;
           r.lungeCd = T.lungeCooldown + Math.random() * 0.6;

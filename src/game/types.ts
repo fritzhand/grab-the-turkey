@@ -54,11 +54,46 @@ export interface DogState {
   t: number;
 }
 
+/** A turkey token: a gold coin lying about. Touch it for a point. */
+export interface Token {
+  id: number;
+  p: [number, number];
+}
+
+/**
+ * The leprechaun: small, quick, and it slips away. It shows up once a minute somewhere in the place.
+ * Catch it by hand for 25 points, or pick up the trap and put it on the leprechaun for 50.
+ */
+export interface Leprechaun {
+  p: [number, number];
+  v: [number, number];
+  f: number;
+  /** Milliseconds before it slips away; once caught, before it (or the trap) is gone. */
+  t: number;
+  /** Who caught it, once it is caught, and how. */
+  by: string | null;
+  how?: 'trap' | 'hands';
+  /** Milliseconds before it can hop away again. */
+  hop: number;
+}
+
+/** The trap: lying somewhere (a different place each time), or carried by `by`. */
+export interface Trap {
+  p: [number, number];
+  by: string | null;
+}
+
 export interface GameEvent {
-  /** steal: b took it from a; dog: the dog took it from a; catch: b caught a's throw; pickup: b; drop: the dog dropped it. */
-  k: 'steal' | 'dog' | 'catch' | 'pickup' | 'drop' | 'throw';
+  /**
+   * steal: b took it from a; dog: the dog took it from a; catch: b caught a's throw; pickup: b; drop: the dog dropped it;
+   * token: b found a token; lep: a leprechaun showed up; trap: b picked up the trap; caught: b caught the leprechaun
+   * (a: 'trap' or 'hands'); gone: the leprechaun slipped away.
+   */
+  k: 'steal' | 'dog' | 'catch' | 'pickup' | 'drop' | 'throw' | 'token' | 'lep' | 'trap' | 'caught' | 'gone';
   a?: string;
   b?: string;
+  /** For token and caught: the points it was worth (doubled when they held the turkey). */
+  n?: number;
   id: number;
 }
 
@@ -75,7 +110,10 @@ export interface Snapshot {
   holder: string | null;
   turkey: TurkeyState;
   dog: DogState;
-  /** Milliseconds each player (and the dog) has held the turkey this round. */
+  /**
+   * Each player's (and the dog's) points this round, in thousandths: a second holding the turkey is 1000, a token
+   * 1000, a trapped leprechaun 50000.
+   */
   scores: Record<string, number>;
   /** Names of everyone who has scored, so the board keeps people who drop out. */
   names: Record<string, string>;
@@ -84,6 +122,10 @@ export interface Snapshot {
   immune: Record<string, number>;
   /** The last few things that happened, for the toasts. */
   events: GameEvent[];
+  /** Turkey tokens lying about, and the leprechaun and its trap when there is one. */
+  tokens?: Token[];
+  lep?: Leprechaun | null;
+  trap?: Trap | null;
   /** The last round's result, kept for the results screen. */
   last?: { round: number; scores: [string, string, number][] };
 }

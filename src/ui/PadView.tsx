@@ -1,7 +1,7 @@
 /**
  * The phone as a controller, for when the game is on the big screen: no 3D (so it stays cool and the
  * battery lasts), just the stick and the buttons, and big plain words about what is happening to
- * you: who has the turkey, your time, your place, the clock. Up on the stick is up on the TV.
+ * you: who has the turkey, your points, your place, the clock. Up on the stick is up on the TV.
  *
  * It buzzes when you get the turkey and when it is taken (where the phone allows it).
  * "Show the room here" switches back to the full 3D view on the phone.
@@ -14,7 +14,7 @@ import { T } from '../game/tuning';
 import { DOG_ID } from '../game/types';
 import { PLAYER_COLORS } from '../world/palette';
 import { Controls } from './Controls';
-import { clock, held, nameOf, Toasts } from './Hud';
+import { clock, held, Hunt, nameOf, Toasts } from './Hud';
 
 function buzz(ms: number | number[]) {
   try {
@@ -83,7 +83,7 @@ export function PadView({ onShowRoom }: { onShowRoom: () => void }) {
         {snap && (snap.phase === 'play' || snap.phase === 'over') && (
           <dl className="gt-padview-stats">
             <div>
-              <dt>Your time</dt>
+              <dt>Your points</dt>
               <dd>{held(myMs)}</dd>
             </div>
             <div>
@@ -105,6 +105,7 @@ export function PadView({ onShowRoom }: { onShowRoom: () => void }) {
         )}
         {game.netNote && <p className="gt-note">{game.netNote}</p>}
       </main>
+      {snap && <Hunt snap={snap} arrow />}
       {snap && <Toasts snap={snap} />}
       <Controls />
     </div>

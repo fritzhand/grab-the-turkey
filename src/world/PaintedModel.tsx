@@ -50,8 +50,8 @@ export function PaintedModel({ env, roof = false }: { env: Environment; roof?: b
   const m = env.model!;
   const gl = useThree((s) => s.gl);
   const [source, setSource] = useState<THREE.Group | null>(null);
-  const lift = useRef(0);
-  const wait = useRef(0.7);
+  /** When this model's roof started its lift (performance.now), and which model that was. */
+  const lift = useRef<{ for: THREE.Object3D | null; at: number }>({ for: null, at: 0 });
   const res = useMemo(() => new THREE.Vector2(), []);
 
   useEffect(() => {
@@ -74,7 +74,7 @@ export function PaintedModel({ env, roof = false }: { env: Environment; roof?: b
     return () => skip.forEach((o) => shadowExclude.delete(o));
   }, [rig]);
 
-  useFrame((_, delta) => {
+  useFrame(() => {
     gl.getDrawingBufferSize(res);
     inkMaterial.uniforms.uRes.value.copy(res);
     // the ink is a hair thick whatever the screen: a little thicker on a dense one
@@ -82,16 +82,14 @@ export function PaintedModel({ env, roof = false }: { env: Environment; roof?: b
     const up = rig?.upper;
     if (!up) return;
     if (KEEP_ROOF || roof) return;
-    if (wait.current > 0) {
-      wait.current -= delta;
-      return;
-    }
-    if (lift.current < 1) {
-      lift.current = Math.min(1, lift.current + delta / 1.5);
-      const e = lift.current * lift.current * (3 - 2 * lift.current);
-      up.position.y = e * e * 26; // slow at first, then away
-      up.visible = lift.current < 1;
-    }
+    // By the clock, not by frames: a slow TV browser that draws few frames still loses the roof on time,
+    // and a new model (the place changed) gets its own lift instead of keeping its roof on.
+    const now = performance.now();
+    if (lift.current.for !== up) lift.current = { for: up, at: now + 700 };
+    const t = Math.min(1, Math.max(0, (now - lift.current.at) / 1500));
+    const e = t * t * (3 - 2 * t);
+    up.position.y = e * e * 26; // slow at first, then away
+    up.visible = t < 1;
   });
 
   if (!rig) return null;

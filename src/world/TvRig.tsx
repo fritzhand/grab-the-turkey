@@ -2,10 +2,16 @@
  * The big screen's camera: the whole place from above, tilted a little so people read as people,
  * with the top of the screen toward -z (the same "up" the phones' sticks use in the controller).
  *
- * A place small enough to read whole (a room, a house) is shown whole, and the camera stays still.
- * A bigger one is followed: the frame holds everyone in play, the turkey and the dog, with room
- * around them, never closer than a minimum nor wider than the place, and drifts with the chase. Its target is copied to game.me.pos, so the contact shadows
- * (which follow "me") follow the action on a screen that has no player of its own.
+ * A place that reads whole on a TV (a room, a house, the White Room) is shown whole, and the camera
+ * stays still: nobody should have to follow a camera that moves on its own. Only a really big place
+ * is followed: the frame holds everyone in play, the turkey and the dog, never closer than most of
+ * the place (so it never closes in on one or two players) nor wider than all of it, and it comes in
+ * far more slowly than it goes out, so it does not breathe with every dodge. Its target is copied to
+ * game.me.pos, so the contact shadows (which follow "me") follow the action on a screen that has no
+ * player of its own.
+ *
+ * The low walls and furniture can still stand between the camera and a player; TvMarkers draws a ring
+ * at everyone's feet that shows through them.
  */
 import { useFrame, useThree } from '@react-three/fiber';
 import { useRef } from 'react';
@@ -14,8 +20,13 @@ import { extentOf } from '../env';
 import { fresh, game } from '../game/store';
 import { getScale } from '../game/tuning';
 
-/** Tilt from straight down, radians: enough to see faces and the sides of furniture. */
-const TILT = 0.5;
+/**
+ * Tilt from straight down, radians: enough to see the sides of things, little enough that a low wall
+ * or a couch hides only a sliver of floor behind it.
+ */
+const TILT = 0.36;
+/** A place this big (half-widths, in walker meters) or smaller is shown whole. */
+const WHOLE = 16;
 const look = new THREE.Vector3();
 
 export function TvRig() {
@@ -54,7 +65,7 @@ export function TvRig() {
     let hz: number;
     let cx: number;
     let cz: number;
-    if (ext.hx <= 13 * k && ext.hz <= 10 * k) {
+    if (ext.hx <= WHOLE * k && ext.hz <= WHOLE * k) {
       // small enough to read whole: show the whole place, still
       hx = ext.hx + 0.6;
       hz = ext.hz + 0.6;
@@ -62,10 +73,10 @@ export function TvRig() {
       cz = 0;
     } else {
       // a big place: follow the chase, never wider than the place itself
-      const pad = 3.2 * k;
-      const minHalf = 6 * k;
+      const pad = 4 * k;
+      const minHalf = Math.max(9 * k, 0.6 * Math.max(ext.hx, ext.hz));
       hx = Math.min(Math.max(minHalf, (maxX - minX) / 2 + pad), ext.hx + 1);
-      hz = Math.min(Math.max(minHalf * 0.6, (maxZ - minZ) / 2 + pad), ext.hz + 1);
+      hz = Math.min(Math.max(minHalf * 0.65, (maxZ - minZ) / 2 + pad), ext.hz + 1);
       cx = THREE.MathUtils.clamp((minX + maxX) / 2, -ext.hx + hx - 1, ext.hx - hx + 1);
       cz = THREE.MathUtils.clamp((minZ + maxZ) / 2, -ext.hz + hz - 1, ext.hz - hz + 1);
       if (!isFinite(cx)) cx = 0;
@@ -76,8 +87,14 @@ export function TvRig() {
     const e = c.first ? 1 : 1 - Math.exp(-dt * 1.2); // slow and steady: a TV should not swim
     c.x += (cx - c.x) * e;
     c.z += (cz - c.z) * e;
-    c.hx += (hx - c.hx) * e;
-    c.hz += (hz - c.hz) * e;
+    // out promptly (someone is leaving the frame), in only slowly and only when it is worth it
+    const ease = (was: number, want: number) => {
+      if (c.first || want > was) return was + (want - was) * e;
+      if (want > was * 0.85) return was;
+      return was + (want - was) * (1 - Math.exp(-dt * 0.25));
+    };
+    c.hx = ease(c.hx, hx);
+    c.hz = ease(c.hz, hz);
     c.first = false;
 
     // the distance that fits both half-widths in view
